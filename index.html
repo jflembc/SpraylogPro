@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SprayLog Pro — Pesticide Application Records</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --soil:       #0F0A05;
+  --soil-mid:   #1A1008;
+  --soil-light: #2A1C0E;
+  --soil-card:  #1E1408;
+  --amber:      #D4882A;
+  --amber-lt:   #F0A840;
+  --amber-pale: #F5CC80;
+  --green:      #3D7A45;
+  --green-lt:   #5BAF66;
+  --red:        #C04040;
+  --red-lt:     #E06060;
+  --sky:        #4A8FA8;
+  --paper:      #F5EFE0;
+  --paper-dk:   #EDE3CC;
+  --ink:        #1A1208;
+  --muted:      #7A6A50;
+  --border:     #3A2818;
+  --border-lt:  #C0A878;
+  --signal-danger: #C04040;
+  --signal-warning: #C8802A;
+  --signal-caution: #8A7A30;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--soil);color:var(--ink);min-height:100vh;overflow-x:hidden;}
+
+/* ── GRAIN OVERLAY ── */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");}
+
+/* ══ AUTH SCREEN ══ */
+#authScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 30% 20%, #2A1C0E 0%, #0F0A05 60%);}
+.auth-box{width:100%;max-width:420px;}
+.auth-logo{margin-bottom:32px;}
+.auth-logo h1{font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--amber);letter-spacing:2px;line-height:1;}
+.auth-logo p{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:4px;}
+.auth-card{background:var(--soil-card);border:1px solid var(--border);border-radius:6px;padding:32px;}
+.auth-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border);}
+.auth-tab{background:transparent;border:none;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:8px 16px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.auth-tab.active{color:var(--amber);border-bottom-color:var(--amber);}
+.auth-error{background:rgba(192,64,64,0.15);border:1px solid var(--red);border-radius:3px;padding:10px 14px;font-size:13px;color:var(--red-lt);margin-bottom:16px;}
+.auth-success{background:rgba(61,122,69,0.15);border:1px solid var(--green);border-radius:3px;padding:10px 14px;font-size:13px;color:var(--green-lt);margin-bottom:16px;}
+
+/* ── HEADER ── */
+#appHeader{background:var(--soil-mid);border-bottom:2px solid var(--amber);padding:0 20px;display:flex;align-items:stretch;gap:0;position:sticky;top:0;z-index:100;}
+.hdr-brand{display:flex;align-items:center;gap:12px;padding:12px 20px 12px 0;border-right:1px solid var(--border);margin-right:16px;flex-shrink:0;}
+.hdr-brand h1{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--amber);letter-spacing:2px;}
+.hdr-brand .sub{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.nav-tabs{display:flex;align-items:stretch;flex:1;}
+.nav-tab{background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:0 14px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.nav-tab:hover{color:var(--amber-lt);}
+.nav-tab.active{color:var(--amber);border-bottom-color:var(--amber);}
+.hdr-right{display:flex;align-items:center;gap:10px;margin-left:auto;padding:10px 0;}
+.mode-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;padding:4px 10px;border-radius:2px;text-transform:uppercase;cursor:pointer;}
+.mode-own{background:rgba(61,122,69,.2);color:var(--green-lt);border:1px solid var(--green);}
+.mode-custom{background:rgba(74,143,168,.2);color:var(--sky);border:1px solid var(--sky);}
+.user-btn{background:transparent;border:1px solid var(--border);border-radius:3px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:6px 12px;cursor:pointer;transition:.15s;}
+.user-btn:hover{border-color:var(--amber);color:var(--amber);}
+
+/* ── MAIN ── */
+#appMain{max-width:1060px;margin:0 auto;padding:24px 16px 80px;}
+.tab-content{animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── FORM PRIMITIVES ── */
+.sec-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--amber);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.card{background:var(--paper);border-radius:4px;padding:20px;margin-bottom:14px;}
+.card-dark{background:var(--soil-card);border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:14px;}
+.form-group{margin-bottom:12px;}
+label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+input[type=text],input[type=number],input[type=email],input[type=password],input[type=date],input[type=time],select,textarea{width:100%;background:var(--paper-dk);border:1px solid var(--border-lt);border-radius:3px;padding:9px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--ink);outline:none;transition:border-color .15s;appearance:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--amber);}
+input[readonly]{opacity:.55;cursor:not-allowed;}
+.form-row{display:grid;gap:12px;margin-bottom:12px;}
+.c2{grid-template-columns:1fr 1fr;}
+.c3{grid-template-columns:1fr 1fr 1fr;}
+.c4{grid-template-columns:1fr 1fr 1fr 1fr;}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--amber);color:var(--soil);}
+.btn-primary:hover{background:var(--amber-lt);}
+.btn-outline{background:transparent;border:1px solid var(--amber);color:var(--amber);}
+.btn-outline:hover{background:var(--amber);color:var(--soil);}
+.btn-ghost{background:transparent;border:1px dashed var(--border);color:var(--muted);font-size:10px;}
+.btn-ghost:hover{border-color:var(--amber);color:var(--amber);}
+.btn-danger{background:transparent;border:1px solid var(--red);color:var(--red);font-size:10px;}
+.btn-danger:hover{background:var(--red);color:#fff;}
+.btn-green{background:var(--green);color:#fff;}
+.btn-green:hover{background:var(--green-lt);}
+.btn-sm{padding:6px 12px;font-size:10px;}
+.flex-between{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.flex-gap{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.hidden{display:none!important;}
+
+/* ── RESULT BOXES ── */
+.results-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.r-box{background:#080503;border:1px solid var(--border);border-radius:4px;padding:14px;text-align:center;}
+.r-box .rl{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.r-box .rv{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--paper);line-height:1;}
+.r-box.amber .rv{color:var(--amber);}
+.r-box.green .rv{color:var(--green-lt);}
+.r-box.red .rv{color:var(--red-lt);}
+
+/* ── WEATHER STRIP ── */
+.weather-strip{display:flex;gap:10px;background:#080503;border:1px solid var(--border);border-radius:4px;padding:14px 18px;margin-bottom:14px;align-items:center;flex-wrap:wrap;}
+.w-item{display:flex;align-items:center;gap:8px;}
+.w-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.w-val{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--amber-pale);}
+.w-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;background:rgba(61,122,69,.2);color:var(--green-lt);border:1px solid var(--green);}
+.w-sep{width:1px;height:30px;background:var(--border);}
+
+/* ── CHEMICAL PRODUCT ROWS ── */
+.product-row{display:grid;grid-template-columns:1fr 180px 120px 42px;gap:8px;align-items:start;margin-bottom:10px;padding:12px;background:#F9F4EA;border:1px solid var(--border-lt);border-radius:3px;}
+.product-row.dark-row{background:var(--soil-mid);border-color:var(--border);}
+.epa-display{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:5px 0;}
+.ppe-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.ppe-tag{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.5px;background:rgba(200,128,42,.12);color:#C8802A;border:1px solid rgba(200,128,42,.3);padding:3px 7px;border-radius:2px;}
+.signal-DANGER{color:var(--signal-danger);}
+.signal-WARNING{color:var(--signal-warning);}
+.signal-CAUTION{color:var(--signal-caution);}
+
+/* ── LOG CARDS (list) ── */
+.log-card{background:var(--soil-card);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s;}
+.log-card:hover{border-color:var(--amber);}
+.log-card .lc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+.log-card .lc-name{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--amber-pale);letter-spacing:1px;}
+.log-card .lc-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+.log-card .lc-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);line-height:1.8;}
+.status-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:2px;}
+.status-draft{background:rgba(122,106,80,.2);color:var(--muted);border:1px solid var(--border);}
+.status-complete{background:rgba(61,122,69,.2);color:var(--green-lt);border:1px solid var(--green);}
+.status-signed{background:rgba(212,136,42,.2);color:var(--amber);border:1px solid var(--amber);}
+.add-log-card{border:2px dashed var(--border);border-radius:4px;padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);cursor:pointer;transition:.15s;background:transparent;}
+.add-log-card:hover{border-color:var(--amber);color:var(--amber);}
+
+/* ── CERT EXPIRY BANNER ── */
+.cert-banner{background:rgba(192,64,64,.15);border:1px solid var(--red);border-radius:4px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.cert-banner p{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--red-lt);}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:300;padding:16px;}
+.modal{background:var(--paper);border-radius:6px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
+.modal h2{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;margin-bottom:20px;color:var(--soil);}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+.modal-dark{background:var(--soil-card);border:1px solid var(--border);}
+.modal-dark h2{color:var(--amber);}
+.modal-dark label{color:var(--muted);}
+.modal-dark input,.modal-dark select,.modal-dark textarea{background:var(--soil-mid);border-color:var(--border);color:var(--paper);}
+.modal-dark input:focus,.modal-dark select:focus{border-color:var(--amber);}
+
+/* ── SIGNATURE PAD ── */
+#sigCanvas{border:2px solid var(--border-lt);border-radius:3px;background:#fff;cursor:crosshair;display:block;width:100%;max-width:460px;height:140px;}
+.sig-btns{display:flex;gap:8px;margin-top:8px;}
+.sig-preview{max-width:100%;max-height:80px;border:1px solid var(--border-lt);border-radius:3px;margin-top:8px;}
+
+/* ── CUSTOMER SELECT ── */
+.customer-bar{display:flex;gap:10px;align-items:center;background:rgba(74,143,168,.08);border:1px solid rgba(74,143,168,.3);border-radius:4px;padding:12px 16px;margin-bottom:14px;}
+.customer-bar select{max-width:280px;background:var(--soil-mid);border-color:var(--border);color:var(--paper);}
+
+/* ── PRINT / PDF ── */
+@media print{
+  #appHeader,#newLogBtn,.btn,.nav-tab{display:none!important;}
+  body{background:#fff;color:#000;}
+  .card,.card-dark{background:#fff!important;border:1px solid #ccc!important;color:#000!important;}
+  .print-section{page-break-inside:avoid;}
+}
+
+/* ── TABLE ── */
+.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+.data-table th{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);padding:8px 12px;text-align:left;background:#080503;border-bottom:1px solid var(--border);}
+.data-table td{padding:10px 12px;border-bottom:1px solid rgba(58,40,24,.3);color:var(--paper);font-family:'IBM Plex Sans',sans-serif;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:rgba(58,40,24,.4);}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty .ei{font-size:48px;margin-bottom:12px;}
+.empty p{font-size:14px;margin-bottom:20px;}
+
+/* ── FIELD MAP ── */
+.field-map-box{position:relative;background:#1A1408;border:1px solid var(--border);border-radius:3px;overflow:hidden;}
+.field-map-label{position:absolute;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--amber);padding:4px;}
+.field-map-label.n{top:4px;left:50%;transform:translateX(-50%);}
+.field-map-label.s{bottom:4px;left:50%;transform:translateX(-50%);}
+.field-map-label.e{right:4px;top:50%;transform:translateY(-50%);}
+.field-map-label.w{left:4px;top:50%;transform:translateY(-50%);}
+#fieldMapCanvas{display:block;width:100%;height:180px;}
+
+@media(max-width:700px){
+  .c2,.c3,.c4{grid-template-columns:1fr;}
+  .results-grid{grid-template-columns:1fr 1fr;}
+  .product-row{grid-template-columns:1fr;}
+  #appHeader{flex-wrap:wrap;padding:10px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════ AUTH SCREEN ════════ -->
+<div id="authScreen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <h1>SprayLog Pro</h1>
+      <p>Pesticide Application Records</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="setAuthTab('login')">Sign In</button>
+        <button class="auth-tab" onclick="setAuthTab('signup')">Create Account</button>
+      </div>
+      <div id="authMsg"></div>
+
+      <!-- LOGIN -->
+      <div id="loginForm">
+        <div class="form-group"><label>Email</label><input type="email" id="li_email" placeholder="you@farm.com"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="li_pass" placeholder="••••••••"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Sign In</button>
+      </div>
+
+      <!-- SIGNUP -->
+      <div id="signupForm" class="hidden">
+        <div class="form-row c2">
+          <div class="form-group" style="margin:0"><label>Full Name</label><input type="text" id="su_name" placeholder="John Anderson"></div>
+          <div class="form-group" style="margin:0"><label>Email</label><input type="email" id="su_email" placeholder="you@farm.com"></div>
+        </div>
+        <div class="form-row c2">
+          <div class="form-group" style="margin:0"><label>Password</label><input type="password" id="su_pass" placeholder="Min 6 chars"></div>
+          <div class="form-group" style="margin:0"><label>Confirm Password</label><input type="password" id="su_pass2" placeholder="••••••••"></div>
+        </div>
+        <hr style="border-color:var(--border);margin:14px 0;">
+        <div class="sec-label" style="margin-bottom:10px;">Applicator Details</div>
+        <div class="form-row c2">
+          <div class="form-group" style="margin:0"><label>Certification Number</label><input type="text" id="su_cert" placeholder="ND-2024-XXXXX"></div>
+          <div class="form-group" style="margin:0">
+            <label>Mode</label>
+            <select id="su_mode">
+              <option value="own_farm">Own Farm</option>
+              <option value="custom_applicator">Custom Applicator</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row c2">
+          <div class="form-group" style="margin:0"><label>Cert Issued</label><input type="date" id="su_certIssued"></div>
+          <div class="form-group" style="margin:0"><label>Cert Expires</label><input type="date" id="su_certExpires"></div>
+        </div>
+        <div class="form-row c3">
+          <div class="form-group" style="margin:0"><label>Address</label><input type="text" id="su_addr" placeholder="1234 County Rd"></div>
+          <div class="form-group" style="margin:0"><label>City</label><input type="text" id="su_city"></div>
+          <div class="form-group" style="margin:0"><label>State / ZIP</label><input type="text" id="su_statezip" placeholder="ND 58501"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px;" onclick="doSignup()">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ APP ════════ -->
+<div id="app" class="hidden">
+
+  <!-- HEADER -->
+  <div id="appHeader">
+    <div class="hdr-brand">
+      <div>
+        <h1>SprayLog Pro</h1>
+        <div class="sub">Pesticide Records</div>
+      </div>
+    </div>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="logs" onclick="switchTab('logs')">Records</button>
+      <button class="nav-tab" data-tab="newlog" onclick="switchTab('newlog')">+ New Record</button>
+      <button class="nav-tab" data-tab="customers" onclick="switchTab('customers')" id="customersTab">Customers</button>
+      <button class="nav-tab" data-tab="chemicals" onclick="switchTab('chemicals')">Chemicals</button>
+      <button class="nav-tab" data-tab="profile" onclick="switchTab('profile')">Profile</button>
+    </nav>
+    <div class="hdr-right">
+      <span class="mode-badge mode-own" id="modeBadge" onclick="toggleMode()">Own Farm</span>
+      <button class="user-btn" onclick="doLogout()" id="userBtn">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- CERT BANNER -->
+  <div id="certBanner" class="hidden" style="margin:0;border-radius:0;border-left:none;border-right:none;">
+    <div style="max-width:1060px;margin:0 auto;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <p id="certBannerMsg">⚠ Your pesticide applicator certification expires soon. Schedule your renewal test.</p>
+      <button class="btn btn-danger btn-sm" onclick="switchTab('profile')">View Cert Details</button>
+    </div>
+  </div>
+
+  <div id="appMain">
+
+    <!-- ══ RECORDS TAB ══ -->
+    <div id="tab-logs" class="tab-content">
+      <div class="flex-between">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--amber);letter-spacing:1px;">Application Records</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);" id="logSubtitle">Loading...</div>
+        </div>
+        <button class="btn btn-primary" onclick="switchTab('newlog')">+ New Record</button>
+      </div>
+      <div id="logsList"></div>
+    </div>
+
+    <!-- ══ NEW/EDIT LOG TAB ══ -->
+    <div id="tab-newlog" class="tab-content hidden">
+      <div class="flex-between">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--amber);letter-spacing:1px;" id="logFormTitle">New Application Record</div>
+        <div class="flex-gap">
+          <button class="btn btn-ghost btn-sm" onclick="saveDraft()">Save Draft</button>
+          <button class="btn btn-green" onclick="completeLog()">Mark Complete</button>
+          <button class="btn btn-outline btn-sm" onclick="printLog()">Print / PDF</button>
+        </div>
+      </div>
+
+      <!-- CUSTOMER BAR (custom applicator mode) -->
+      <div id="customerBar" class="customer-bar hidden">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--sky);letter-spacing:1px;white-space:nowrap;">CUSTOMER:</span>
+        <select id="log_customerId" style="max-width:280px;background:var(--soil-mid);border:1px solid var(--border);color:var(--paper);font-family:'IBM Plex Sans',sans-serif;" onchange="onCustomerChange()">
+          <option value="">— Select Customer —</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="openCustomerModal()">+ New</button>
+      </div>
+
+      <!-- APPLICATOR INFO (auto-filled) -->
+      <div class="card">
+        <div class="sec-label">Applicator Information</div>
+        <div class="form-row c4">
+          <div class="form-group" style="margin:0;grid-column:span 2"><label>Name</label><input type="text" id="log_appName" readonly></div>
+          <div class="form-group" style="margin:0;grid-column:span 2"><label>Address</label><input type="text" id="log_appAddr" readonly></div>
+        </div>
+        <div class="form-row c4">
+          <div class="form-group" style="margin:0"><label>City</label><input type="text" id="log_appCity" readonly></div>
+          <div class="form-group" style="margin:0"><label>State</label><input type="text" id="log_appState" readonly></div>
+          <div class="form-group" style="margin:0"><label>ZIP</label><input type="text" id="log_appZip" readonly></div>
+          <div class="form-group" style="margin:0"><label>Cert #</label><input type="text" id="log_appCert" readonly></div>
+        </div>
+        <div class="form-group">
+          <label>Equipment Used</label>
+          <input type="text" id="log_equipment" placeholder="e.g. John Deere R4045 Sprayer">
+        </div>
+      </div>
+
+      <!-- PRODUCTS -->
+      <div class="card">
+        <div class="sec-label">Products Applied</div>
+        <div id="productRows"></div>
+        <button class="btn btn-ghost" onclick="addProductRow()" style="margin-top:4px;">+ Add Product</button>
+      </div>
+
+      <!-- APPLICATION DETAILS -->
+      <div class="card">
+        <div class="sec-label">Application Details</div>
+        <div class="form-row c3">
+          <div class="form-group" style="margin:0"><label>Commodity Applied To</label><input type="text" id="log_commodity" placeholder="e.g. Corn, Soybeans"></div>
+          <div class="form-group" style="margin:0"><label>Pest Controlled</label><input type="text" id="log_pest" placeholder="e.g. Broadleaf weeds"></div>
+          <div class="form-group" style="margin:0"><label>Water / Acre (gal)</label><input type="number" id="log_water" placeholder="15"></div>
+        </div>
+        <div class="form-row c3">
+          <div class="form-group" style="margin:0"><label>Application Date</label><input type="date" id="log_appDate"></div>
+          <div class="form-group" style="margin:0"><label>Start Time</label><input type="time" id="log_startTime"></div>
+          <div class="form-group" style="margin:0"><label>Stop Time</label><input type="time" id="log_stopTime"></div>
+        </div>
+        <div class="form-row c3">
+          <div class="form-group" style="margin:0"><label>Acres</label><input type="number" id="log_acres" placeholder="320"></div>
+          <div class="form-group" style="margin:0;grid-column:span 2"><label>Pesticide Supplier</label><input type="text" id="log_supplier" placeholder="e.g. Helena Agri-Enterprises"></div>
+        </div>
+        <div class="form-group">
+          <label>Legal Description (Township, Range, Section)</label>
+          <input type="text" id="log_legals" placeholder="e.g. S12, T8S, R41W — Cheyenne County, KS">
+        </div>
+        <div class="form-group">
+          <label>Notification Name (Adjacent Landowner / Sensitive Area)</label>
+          <input type="text" id="log_notification" placeholder="Name of person notified, if required">
+        </div>
+      </div>
+
+      <!-- WEATHER -->
+      <div class="card-dark">
+        <div class="sec-label">Weather Conditions at Time of Application</div>
+        <div id="weatherAutoStrip" class="weather-strip hidden">
+          <span class="w-badge">● AUTO</span>
+          <div class="w-sep"></div>
+          <div class="w-item"><span class="w-label">Wind</span><span class="w-val" id="wx_wind">—</span></div>
+          <div class="w-sep"></div>
+          <div class="w-item"><span class="w-label">Direction</span><span class="w-val" id="wx_dir">—</span></div>
+          <div class="w-sep"></div>
+          <div class="w-item"><span class="w-label">Temp</span><span class="w-val" id="wx_temp">—</span></div>
+          <div style="margin-left:auto;">
+            <button class="btn btn-ghost btn-sm" onclick="fetchWeather()">↺ Refresh</button>
+          </div>
+        </div>
+        <div class="form-row c3" id="weatherManual">
+          <div class="form-group" style="margin:0"><label>Wind Speed (mph)</label><input type="number" id="log_windSpeed" placeholder="8" step="0.1"></div>
+          <div class="form-group" style="margin:0"><label>Wind Direction</label>
+            <select id="log_windDir">
+              <option value="">— Select —</option>
+              <option>N</option><option>NNE</option><option>NE</option><option>ENE</option>
+              <option>E</option><option>ESE</option><option>SE</option><option>SSE</option>
+              <option>S</option><option>SSW</option><option>SW</option><option>WSW</option>
+              <option>W</option><option>WNW</option><option>NW</option><option>NNW</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0"><label>Temperature (°F)</label><input type="number" id="log_temp" placeholder="72"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="fetchWeather()" style="margin-top:4px;">⚡ Auto-Fill Weather</button>
+      </div>
+
+      <!-- FIELD MAP -->
+      <div class="card">
+        <div class="sec-label">Field Map / Notes</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;font-family:'IBM Plex Mono',monospace;">Draw an approximate field boundary or add notes below.</p>
+        <div class="field-map-box" style="margin-bottom:10px;">
+          <span class="field-map-label n">N</span>
+          <span class="field-map-label s">S</span>
+          <span class="field-map-label e">E</span>
+          <span class="field-map-label w">W</span>
+          <canvas id="fieldMapCanvas" width="900" height="180"></canvas>
+        </div>
+        <div class="flex-gap" style="margin-bottom:10px;">
+          <button class="btn btn-ghost btn-sm" onclick="clearMapCanvas()">Clear Map</button>
+        </div>
+        <div class="form-group">
+          <label>Field Notes</label>
+          <textarea id="log_fieldNotes" rows="2" placeholder="Obstacles, skip areas, buffer zones..."></textarea>
+        </div>
+      </div>
+
+      <!-- SIGNATURE -->
+      <div class="card">
+        <div class="sec-label">Applicator Signature</div>
+        <div id="sigExisting" class="hidden">
+          <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">Saved signature on file:</p>
+          <img id="sigPreviewImg" class="sig-preview" src="" alt="Saved signature">
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="clearSavedSig()">Use Different Signature</button>
+        </div>
+        <div id="sigCapture">
+          <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm active-sig-tab" id="sigTabDraw" onclick="setSigTab('draw')">Draw</button>
+            <button class="btn btn-ghost btn-sm" id="sigTabUpload" onclick="setSigTab('upload')">Upload Image</button>
+          </div>
+          <div id="sigDrawPanel">
+            <canvas id="sigCanvas"></canvas>
+            <div class="sig-btns">
+              <button class="btn btn-ghost btn-sm" onclick="clearSigCanvas()">Clear</button>
+              <button class="btn btn-outline btn-sm" onclick="saveSigToProfile()">Save to Profile</button>
+            </div>
+          </div>
+          <div id="sigUploadPanel" class="hidden">
+            <input type="file" id="sigUploadInput" accept="image/*" onchange="handleSigUpload(event)">
+            <img id="sigUploadPreview" class="sig-preview hidden" src="" alt="">
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM ACTIONS -->
+      <div class="flex-gap" style="justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-ghost" onclick="switchTab('logs')">Cancel</button>
+        <button class="btn btn-outline" onclick="saveDraft()">Save Draft</button>
+        <button class="btn btn-green" onclick="completeLog()">Complete Record</button>
+      </div>
+    </div>
+
+    <!-- ══ CUSTOMERS TAB ══ -->
+    <div id="tab-customers" class="tab-content hidden">
+      <div class="flex-between">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--amber);letter-spacing:1px;">Customers</div>
+        <button class="btn btn-primary" onclick="openCustomerModal()">+ Add Customer</button>
+      </div>
+      <div id="customersList"></div>
+    </div>
+
+    <!-- ══ CHEMICALS TAB ══ -->
+    <div id="tab-chemicals" class="tab-content hidden">
+      <div class="flex-between">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--amber);letter-spacing:1px;">Chemical Library</div>
+        <button class="btn btn-primary" onclick="openChemicalModal()">+ Add Custom Chemical</button>
+      </div>
+      <div class="card-dark" style="margin-top:8px;">
+        <input type="text" id="chemSearch" placeholder="Search chemicals..." style="background:var(--soil-mid);border-color:var(--border);color:var(--paper);margin-bottom:14px;" oninput="filterChemicals()">
+        <table class="data-table" id="chemTable">
+          <thead><tr>
+            <th>Product Name</th><th>EPA #</th><th>Active Ingredient</th><th>REI</th><th>Signal</th><th>Type</th>
+          </tr></thead>
+          <tbody id="chemTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ PROFILE TAB ══ -->
+    <div id="tab-profile" class="tab-content hidden">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--amber);letter-spacing:1px;margin-bottom:16px;">My Profile</div>
+
+      <div class="card">
+        <div class="sec-label">Personal & Contact</div>
+        <div class="form-row c2">
+          <div class="form-group" style="margin:0"><label>Full Name</label><input type="text" id="pr_name" placeholder="John Anderson"></div>
+          <div class="form-group" style="margin:0"><label>Mode</label>
+            <select id="pr_mode" onchange="onModeChange()">
+              <option value="own_farm">Own Farm</option>
+              <option value="custom_applicator">Custom Applicator</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row c4">
+          <div class="form-group" style="margin:0;grid-column:span 2"><label>Address</label><input type="text" id="pr_address" placeholder="1234 County Rd"></div>
+          <div class="form-group" style="margin:0"><label>City</label><input type="text" id="pr_city"></div>
+          <div class="form-group" style="margin:0"><label>State</label><input type="text" id="pr_state" placeholder="ND"></div>
+        </div>
+        <div class="form-row c2">
+          <div class="form-group" style="margin:0"><label>ZIP</label><input type="text" id="pr_zip"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-label">Applicator Certification</div>
+        <div class="form-row c3">
+          <div class="form-group" style="margin:0"><label>Certification Number</label><input type="text" id="pr_cert" placeholder="ND-2024-XXXXX"></div>
+          <div class="form-group" style="margin:0"><label>Date Issued</label><input type="date" id="pr_certIssued"></div>
+          <div class="form-group" style="margin:0"><label>Expiration Date</label><input type="date" id="pr_certExpires"></div>
+        </div>
+        <div id="certStatusBox" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="sec-label">Applicator Signature</div>
+        <p style="font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:12px;">This signature is saved to your profile and used on all records.</p>
+        <canvas id="profileSigCanvas"></canvas>
+        <div class="sig-btns">
+          <button class="btn btn-ghost btn-sm" onclick="clearProfileSig()">Clear</button>
+          <button class="btn btn-outline btn-sm" onclick="saveProfileSigFromCanvas()">Save Signature</button>
+        </div>
+        <div id="profileSigSaved" class="hidden" style="margin-top:12px;">
+          <p style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">Saved:</p>
+          <img id="profileSigImg" class="sig-preview" src="" alt="">
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+      </div>
+    </div>
+
+  </div><!-- /appMain -->
+</div><!-- /app -->
+
+<!-- ════════ MODALS ════════ -->
+
+<!-- CUSTOMER MODAL -->
+<div class="modal-overlay hidden" id="customerModal">
+  <div class="modal">
+    <h2 id="customerModalTitle">Add Customer</h2>
+    <div class="form-group"><label>Customer / Business Name</label><input type="text" id="cm_name" placeholder="Anderson Family Farm"></div>
+    <div class="form-row c2">
+      <div class="form-group" style="margin:0"><label>Address</label><input type="text" id="cm_address"></div>
+      <div class="form-group" style="margin:0"><label>City</label><input type="text" id="cm_city"></div>
+    </div>
+    <div class="form-row c3">
+      <div class="form-group" style="margin:0"><label>State</label><input type="text" id="cm_state"></div>
+      <div class="form-group" style="margin:0"><label>ZIP</label><input type="text" id="cm_zip"></div>
+      <div class="form-group" style="margin:0"><label>Phone</label><input type="text" id="cm_phone"></div>
+    </div>
+    <div class="form-group"><label>Email</label><input type="email" id="cm_email"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeCustomerModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">Save Customer</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHEMICAL MODAL -->
+<div class="modal-overlay hidden" id="chemModal">
+  <div class="modal">
+    <h2>Add Custom Chemical</h2>
+    <div class="form-group"><label>Product Name</label><input type="text" id="chm_name" placeholder="Product name"></div>
+    <div class="form-row c2">
+      <div class="form-group" style="margin:0"><label>EPA Number</label><input type="text" id="chm_epa" placeholder="XXX-XXXX"></div>
+      <div class="form-group" style="margin:0"><label>Active Ingredient</label><input type="text" id="chm_ai" placeholder="Active ingredient"></div>
+    </div>
+    <div class="form-row c2">
+      <div class="form-group" style="margin:0"><label>REI (hours)</label><input type="number" id="chm_rei" placeholder="12"></div>
+      <div class="form-group" style="margin:0"><label>Signal Word</label>
+        <select id="chm_signal"><option value="CAUTION">CAUTION</option><option value="WARNING">WARNING</option><option value="DANGER">DANGER</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>PPE Requirements (one per line)</label><textarea id="chm_ppe" rows="4" placeholder="Long-sleeved shirt and long pants&#10;Chemical resistant gloves&#10;Protective eyewear"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeChemModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCustomChem()">Save Chemical</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW LOG MODAL -->
+<div class="modal-overlay hidden" id="viewLogModal">
+  <div class="modal modal-dark" style="max-width:720px;">
+    <h2>Application Record</h2>
+    <div id="viewLogContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeViewLog()">Close</button>
+      <button class="btn btn-outline" onclick="editLog()">Edit</button>
+      <button class="btn btn-primary" onclick="printViewLog()">Print / PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// SUPABASE INIT
+// ══════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://iqevslgnnkivtjncklvq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxZXZzbGdubmtpdnRqbmNrbHZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjMyMDAsImV4cCI6MjA4OTg5OTIwMH0.LrfDRFyCQRO4cYZXlz4XfK3Rx-yUPb-xBcnY3-YnwoQ';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let currentUser = null;
+let userProfile = null;
+let allChemicals = [];
+let allCustomers = [];
+let allLogs = [];
+let editingLogId = null;
+let editingCustomerId = null;
+let currentViewLogId = null;
+let productRowCount = 0;
+
+// ══════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════
+function setAuthTab(tab) {
+  document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
+  document.getElementById('authMsg').innerHTML = '';
+}
+
+function authMsg(msg, type='error') {
+  document.getElementById('authMsg').innerHTML = `<div class="auth-${type}">${msg}</div>`;
+}
+
+async function doLogin() {
+  const email = document.getElementById('li_email').value.trim();
+  const pass = document.getElementById('li_pass').value;
+  if (!email || !pass) { authMsg('Please fill in all fields.'); return; }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { authMsg(error.message); return; }
+  await bootApp(data.user);
+}
+
+async function doSignup() {
+  const name = document.getElementById('su_name').value.trim();
+  const email = document.getElementById('su_email').value.trim();
+  const pass = document.getElementById('su_pass').value;
+  const pass2 = document.getElementById('su_pass2').value;
+  if (!name || !email || !pass) { authMsg('Please fill in all required fields.'); return; }
+  if (pass !== pass2) { authMsg('Passwords do not match.'); return; }
+  if (pass.length < 6) { authMsg('Password must be at least 6 characters.'); return; }
+
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
+  if (error) { authMsg(error.message); return; }
+
+  if (data.user) {
+    const statezip = document.getElementById('su_statezip').value.trim().split(' ');
+    await sb.from('profiles').upsert({
+      id: data.user.id,
+      full_name: name,
+      address: document.getElementById('su_addr').value.trim(),
+      city: document.getElementById('su_city').value.trim(),
+      state: statezip[0] || '',
+      zip: statezip[1] || '',
+      cert_number: document.getElementById('su_cert').value.trim(),
+      cert_issued: document.getElementById('su_certIssued').value || null,
+      cert_expires: document.getElementById('su_certExpires').value || null,
+      mode: document.getElementById('su_mode').value
+    });
+    authMsg('Account created! Signing you in...', 'success');
+    setTimeout(() => doLogin(), 1200);
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null; userProfile = null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('authScreen').classList.remove('hidden');
+}
+
+async function bootApp(user) {
+  currentUser = user;
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  await loadProfile();
+  await loadChemicals();
+  await loadCustomers();
+  await loadLogs();
+  initSignaturePads();
+  checkCertExpiry();
+  switchTab('logs');
+}
+
+// ══════════════════════════════════════════════════════
+// PROFILE
+// ══════════════════════════════════════════════════════
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  userProfile = data;
+  if (!userProfile) return;
+  updateModeUI(userProfile.mode || 'own_farm');
+  if (userProfile.signature_data) {
+    document.getElementById('sigExisting').classList.remove('hidden');
+    document.getElementById('sigCapture').classList.add('hidden');
+    document.getElementById('sigPreviewImg').src = userProfile.signature_data;
+    document.getElementById('profileSigSaved').classList.remove('hidden');
+    document.getElementById('profileSigImg').src = userProfile.signature_data;
+  }
+  // Fill profile tab
+  document.getElementById('pr_name').value = userProfile.full_name || '';
+  document.getElementById('pr_mode').value = userProfile.mode || 'own_farm';
+  document.getElementById('pr_address').value = userProfile.address || '';
+  document.getElementById('pr_city').value = userProfile.city || '';
+  document.getElementById('pr_state').value = userProfile.state || '';
+  document.getElementById('pr_zip').value = userProfile.zip || '';
+  document.getElementById('pr_cert').value = userProfile.cert_number || '';
+  if (userProfile.cert_issued) document.getElementById('pr_certIssued').value = userProfile.cert_issued;
+  if (userProfile.cert_expires) document.getElementById('pr_certExpires').value = userProfile.cert_expires;
+  document.getElementById('userBtn').textContent = (userProfile.full_name?.split(' ')[0] || 'User') + ' · Sign Out';
+  updateCertStatus();
+}
+
+async function saveProfile() {
+  if (!currentUser) return;
+  const updates = {
+    id: currentUser.id,
+    full_name: document.getElementById('pr_name').value.trim(),
+    mode: document.getElementById('pr_mode').value,
+    address: document.getElementById('pr_address').value.trim(),
+    city: document.getElementById('pr_city').value.trim(),
+    state: document.getElementById('pr_state').value.trim(),
+    zip: document.getElementById('pr_zip').value.trim(),
+    cert_number: document.getElementById('pr_cert').value.trim(),
+    cert_issued: document.getElementById('pr_certIssued').value || null,
+    cert_expires: document.getElementById('pr_certExpires').value || null
+  };
+  const { error } = await sb.from('profiles').upsert(updates);
+  if (error) { alert('Save failed: ' + error.message); return; }
+  userProfile = { ...userProfile, ...updates };
+  updateModeUI(updates.mode);
+  updateCertStatus();
+  alert('Profile saved.');
+}
+
+function onModeChange() { updateModeUI(document.getElementById('pr_mode').value); }
+
+function updateModeUI(mode) {
+  const badge = document.getElementById('modeBadge');
+  const custTab = document.getElementById('customersTab');
+  const custBar = document.getElementById('customerBar');
+  if (mode === 'custom_applicator') {
+    badge.textContent = 'Custom Applicator';
+    badge.className = 'mode-badge mode-custom';
+    custTab.classList.remove('hidden');
+    custBar.classList.remove('hidden');
+  } else {
+    badge.textContent = 'Own Farm';
+    badge.className = 'mode-badge mode-own';
+    custTab.classList.add('hidden');
+    custBar.classList.add('hidden');
+  }
+  if (userProfile) userProfile.mode = mode;
+}
+
+function toggleMode() {
+  const current = userProfile?.mode || 'own_farm';
+  const next = current === 'own_farm' ? 'custom_applicator' : 'own_farm';
+  document.getElementById('pr_mode').value = next;
+  updateModeUI(next);
+  if (userProfile) userProfile.mode = next;
+  sb.from('profiles').update({ mode: next }).eq('id', currentUser.id);
+}
+
+function updateCertStatus() {
+  const expStr = document.getElementById('pr_certExpires').value;
+  const box = document.getElementById('certStatusBox');
+  if (!expStr) { box.innerHTML = ''; return; }
+  const exp = new Date(expStr);
+  const now = new Date();
+  const days = Math.ceil((exp - now) / (1000*60*60*24));
+  if (days < 0) {
+    box.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--red-lt);padding:8px 0;">⚠ EXPIRED ${Math.abs(days)} days ago. Renew immediately.</div>`;
+  } else if (days < 90) {
+    box.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);padding:8px 0;">⚠ Expires in ${days} days. Schedule your renewal test.</div>`;
+  } else {
+    box.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--green-lt);padding:8px 0;">✓ Valid — ${days} days remaining.</div>`;
+  }
+}
+
+function checkCertExpiry() {
+  if (!userProfile?.cert_expires) return;
+  const exp = new Date(userProfile.cert_expires);
+  const days = Math.ceil((exp - new Date()) / (1000*60*60*24));
+  if (days < 90) {
+    document.getElementById('certBanner').classList.remove('hidden');
+    const msg = days < 0
+      ? `⚠ Your pesticide applicator certification EXPIRED ${Math.abs(days)} days ago. You must renew before applying pesticides.`
+      : `⚠ Your pesticide applicator certification expires in ${days} days. Schedule your renewal test now.`;
+    document.getElementById('certBannerMsg').textContent = msg;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// CHEMICALS
+// ══════════════════════════════════════════════════════
+async function loadChemicals() {
+  const { data } = await sb.from('chemicals').select('*').order('name');
+  allChemicals = data || [];
+  renderChemicalsTable();
+}
+
+function renderChemicalsTable() {
+  const q = document.getElementById('chemSearch')?.value.toLowerCase() || '';
+  const tbody = document.getElementById('chemTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const filtered = allChemicals.filter(c => !q || c.name.toLowerCase().includes(q) || (c.active_ingredient||'').toLowerCase().includes(q));
+  filtered.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:600;color:var(--amber-pale);">${c.name}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${c.epa_number||'—'}</td>
+      <td style="font-size:12px;">${c.active_ingredient||'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${c.rei_hours != null ? c.rei_hours+'h' : '—'}</td>
+      <td><span class="signal-${c.signal_word}" style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;">${c.signal_word||'—'}</span></td>
+      <td style="font-size:11px;color:var(--muted);">${c.is_custom ? 'Custom' : 'System'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterChemicals() { renderChemicalsTable(); }
+
+function openChemicalModal() { document.getElementById('chemModal').classList.remove('hidden'); }
+function closeChemModal() { document.getElementById('chemModal').classList.add('hidden'); }
+
+async function saveCustomChem() {
+  const name = document.getElementById('chm_name').value.trim();
+  if (!name) { alert('Please enter a product name.'); return; }
+  const ppe = document.getElementById('chm_ppe').value.trim().split('\n').filter(Boolean);
+  const { error } = await sb.from('chemicals').insert({
+    name, epa_number: document.getElementById('chm_epa').value.trim(),
+    active_ingredient: document.getElementById('chm_ai').value.trim(),
+    rei_hours: parseInt(document.getElementById('chm_rei').value)||0,
+    signal_word: document.getElementById('chm_signal').value,
+    ppe_requirements: ppe,
+    is_custom: true,
+    owner_id: currentUser.id
+  });
+  if (error) { alert('Error: ' + error.message); return; }
+  closeChemModal();
+  await loadChemicals();
+}
+
+// ══════════════════════════════════════════════════════
+// CUSTOMERS
+// ══════════════════════════════════════════════════════
+async function loadCustomers() {
+  const { data } = await sb.from('customers').select('*').eq('owner_id', currentUser.id).order('name');
+  allCustomers = data || [];
+  renderCustomersList();
+  populateCustomerDropdown();
+}
+
+function renderCustomersList() {
+  const el = document.getElementById('customersList');
+  if (!el) return;
+  if (!allCustomers.length) {
+    el.innerHTML = '<div class="empty"><div class="ei">🌾</div><p>No customers yet.</p></div>';
+    return;
+  }
+  el.innerHTML = '';
+  allCustomers.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'log-card';
+    div.innerHTML = `
+      <div class="lc-head"><span class="lc-name">${c.name}</span></div>
+      <div class="lc-meta">${[c.address, c.city, c.state, c.zip].filter(Boolean).join(', ')} ${c.phone ? '· '+c.phone : ''}</div>
+    `;
+    div.onclick = () => openEditCustomer(c);
+    el.appendChild(div);
+  });
+}
+
+function populateCustomerDropdown() {
+  const sel = document.getElementById('log_customerId');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select Customer —</option>';
+  allCustomers.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.name;
+    if (c.id === cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function openCustomerModal(editing=false) {
+  editingCustomerId = null;
+  document.getElementById('customerModalTitle').textContent = 'Add Customer';
+  ['cm_name','cm_address','cm_city','cm_state','cm_zip','cm_phone','cm_email'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('customerModal').classList.remove('hidden');
+}
+
+function openEditCustomer(c) {
+  editingCustomerId = c.id;
+  document.getElementById('customerModalTitle').textContent = 'Edit Customer';
+  document.getElementById('cm_name').value = c.name || '';
+  document.getElementById('cm_address').value = c.address || '';
+  document.getElementById('cm_city').value = c.city || '';
+  document.getElementById('cm_state').value = c.state || '';
+  document.getElementById('cm_zip').value = c.zip || '';
+  document.getElementById('cm_phone').value = c.phone || '';
+  document.getElementById('cm_email').value = c.email || '';
+  document.getElementById('customerModal').classList.remove('hidden');
+}
+
+function closeCustomerModal() { document.getElementById('customerModal').classList.add('hidden'); }
+
+async function saveCustomer() {
+  const name = document.getElementById('cm_name').value.trim();
+  if (!name) { alert('Please enter a customer name.'); return; }
+  const payload = {
+    owner_id: currentUser.id,
+    name,
+    address: document.getElementById('cm_address').value.trim(),
+    city: document.getElementById('cm_city').value.trim(),
+    state: document.getElementById('cm_state').value.trim(),
+    zip: document.getElementById('cm_zip').value.trim(),
+    phone: document.getElementById('cm_phone').value.trim(),
+    email: document.getElementById('cm_email').value.trim()
+  };
+  if (editingCustomerId) {
+    await sb.from('customers').update(payload).eq('id', editingCustomerId);
+  } else {
+    await sb.from('customers').insert(payload);
+  }
+  closeCustomerModal();
+  await loadCustomers();
+}
+
+function onCustomerChange() {
+  const id = document.getElementById('log_customerId').value;
+  const c = allCustomers.find(x => x.id === id);
+  if (!c) return;
+  // Could prefill customer address fields if needed
+}
+
+// ══════════════════════════════════════════════════════
+// LOGS
+// ══════════════════════════════════════════════════════
+async function loadLogs() {
+  const { data } = await sb.from('spray_logs').select('*').eq('owner_id', currentUser.id).order('created_at', { ascending: false });
+  allLogs = data || [];
+  renderLogsList();
+}
+
+function renderLogsList() {
+  const el = document.getElementById('logsList');
+  const sub = document.getElementById('logSubtitle');
+  if (!el) return;
+  sub.textContent = `${allLogs.length} record${allLogs.length !== 1 ? 's' : ''} on file`;
+  if (!allLogs.length) {
+    el.innerHTML = '<div class="empty"><div class="ei">📋</div><p>No records yet. Start your first application record.</p><button class="btn btn-primary" onclick="switchTab(\'newlog\')">+ New Record</button></div>';
+    return;
+  }
+  el.innerHTML = '';
+  allLogs.forEach(log => {
+    const div = document.createElement('div');
+    div.className = 'log-card';
+    const prods = (log.products || []).map(p => p.name).join(', ');
+    div.innerHTML = `
+      <div class="lc-head">
+        <span class="lc-name">${log.commodity_applied_to || 'Application Record'}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span class="status-badge status-${log.status||'draft'}">${log.status||'draft'}</span>
+          <span class="lc-date">${log.application_date || formatDate(log.created_at)}</span>
+        </div>
+      </div>
+      <div class="lc-meta">
+        ${log.acres ? log.acres+' acres' : ''} ${log.legal_description ? '· '+log.legal_description : ''}<br>
+        ${prods ? 'Products: '+prods : 'No products added yet'}
+      </div>
+    `;
+    div.onclick = () => viewLog(log.id);
+    el.appendChild(div);
+  });
+}
+
+function viewLog(id) {
+  currentViewLogId = id;
+  const log = allLogs.find(l => l.id === id);
+  if (!log) return;
+  const content = document.getElementById('viewLogContent');
+  const prods = (log.products || []);
+  content.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">APPLICATOR</div><div style="color:var(--paper);font-size:14px;font-weight:600;">${log.applicator_name||'—'}</div></div>
+      <div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">CERT #</div><div style="color:var(--paper);font-size:14px;">${log.applicator_cert_number||'—'}</div></div>
+      <div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">COMMODITY</div><div style="color:var(--paper);font-size:14px;">${log.commodity_applied_to||'—'}</div></div>
+      <div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">PEST CONTROLLED</div><div style="color:var(--paper);font-size:14px;">${log.pest_controlled||'—'}</div></div>
+      <div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">APPLICATION DATE</div><div style="color:var(--amber-pale);font-size:14px;font-weight:600;">${log.application_date||'—'}</div></div>
+      <div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">ACRES</div><div style="color:var(--paper);font-size:14px;">${log.acres||'—'}</div></div>
+      <div style="grid-column:span 2;"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">LEGAL DESCRIPTION</div><div style="color:var(--paper);font-size:13px;">${log.legal_description||'—'}</div></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div class="sec-label" style="color:var(--amber);">Products</div>
+      ${prods.map(p => `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-family:'IBM Plex Sans',sans-serif;">
+        <strong style="color:var(--amber-pale);">${p.name}</strong>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-left:8px;">EPA: ${p.epa_number||'—'}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-left:8px;">Rate: ${p.rate||'—'} ${p.unit||''}</span>
+      </div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+      <div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">WIND</div><div style="color:var(--paper);">${log.wind_speed||'—'} mph ${log.wind_direction||''}</div></div>
+      <div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">TEMP</div><div style="color:var(--paper);">${log.temperature||'—'}°F</div></div>
+      <div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">WATER/ACRE</div><div style="color:var(--paper);">${log.water_per_acre||'—'} gal</div></div>
+    </div>
+    ${log.applicator_signature ? `<div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">SIGNATURE</div><img src="${log.applicator_signature}" style="max-height:60px;border:1px solid var(--border);border-radius:3px;"></div>` : ''}
+  `;
+  document.getElementById('viewLogModal').classList.remove('hidden');
+}
+
+function closeViewLog() { document.getElementById('viewLogModal').classList.add('hidden'); }
+function editLog() { closeViewLog(); openEditLog(currentViewLogId); }
+function printViewLog() { closeViewLog(); openEditLog(currentViewLogId); setTimeout(() => printLog(), 500); }
+
+function openEditLog(id) {
+  const log = allLogs.find(l => l.id === id);
+  if (!log) return;
+  editingLogId = id;
+  switchTab('newlog');
+  document.getElementById('logFormTitle').textContent = 'Edit Record';
+  // Fill form fields
+  document.getElementById('log_commodity').value = log.commodity_applied_to || '';
+  document.getElementById('log_pest').value = log.pest_controlled || '';
+  document.getElementById('log_water').value = log.water_per_acre || '';
+  document.getElementById('log_appDate').value = log.application_date || '';
+  document.getElementById('log_startTime').value = log.application_time || '';
+  document.getElementById('log_stopTime').value = log.stop_time || '';
+  document.getElementById('log_acres').value = log.acres || '';
+  document.getElementById('log_supplier').value = log.pesticide_supplier || '';
+  document.getElementById('log_legals').value = log.legal_description || '';
+  document.getElementById('log_notification').value = log.notification_name || '';
+  document.getElementById('log_windSpeed').value = log.wind_speed || '';
+  document.getElementById('log_windDir').value = log.wind_direction || '';
+  document.getElementById('log_temp').value = log.temperature || '';
+  document.getElementById('log_fieldNotes').value = log.field_map_notes || '';
+  // Products
+  document.getElementById('productRows').innerHTML = '';
+  productRowCount = 0;
+  (log.products || []).forEach(p => addProductRow(p));
+}
+
+// ══════════════════════════════════════════════════════
+// NEW LOG FORM
+// ══════════════════════════════════════════════════════
+function initNewLogForm() {
+  editingLogId = null;
+  document.getElementById('logFormTitle').textContent = 'New Application Record';
+  document.getElementById('productRows').innerHTML = '';
+  productRowCount = 0;
+  addProductRow();
+  // Auto-fill applicator info from profile
+  if (userProfile) {
+    document.getElementById('log_appName').value = userProfile.full_name || '';
+    document.getElementById('log_appAddr').value = userProfile.address || '';
+    document.getElementById('log_appCity').value = userProfile.city || '';
+    document.getElementById('log_appState').value = userProfile.state || '';
+    document.getElementById('log_appZip').value = userProfile.zip || '';
+    document.getElementById('log_appCert').value = userProfile.cert_number || '';
+  }
+  // Auto-fill today's date and current time
+  const now = new Date();
+  document.getElementById('log_appDate').value = now.toISOString().split('T')[0];
+  document.getElementById('log_startTime').value = now.toTimeString().slice(0,5);
+  // Clear other fields
+  ['log_commodity','log_pest','log_water','log_stopTime','log_acres','log_supplier','log_legals','log_notification','log_windSpeed','log_temp','log_fieldNotes'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  document.getElementById('log_windDir').value = '';
+  clearMapCanvas();
+  fetchWeather();
+}
+
+function addProductRow(existing=null) {
+  const idx = productRowCount++;
+  const row = document.createElement('div');
+  row.className = 'product-row';
+  row.dataset.idx = idx;
+  row.innerHTML = `
+    <div>
+      <label>Product</label>
+      <select onchange="onProductSelect(${idx},this)" data-row="${idx}">
+        <option value="">— Select Product —</option>
+        <optgroup label="Common Chemicals">
+          ${allChemicals.map(c => `<option value="${c.id}" data-epa="${c.epa_number||''}" data-ppe='${JSON.stringify(c.ppe_requirements||[])}' data-rei="${c.rei_hours||0}" data-signal="${c.signal_word||''}" ${existing && existing.chemical_id===c.id?'selected':''}>${c.name}</option>`).join('')}
+        </optgroup>
+        <option value="__custom">+ Type Custom Name</option>
+      </select>
+      <input type="text" id="customName_${idx}" placeholder="Custom product name..." class="hidden" style="margin-top:6px;" value="${existing?.isCustom ? existing.name : ''}">
+      <div id="epa_${idx}" class="epa-display">EPA #: ${existing?.epa_number||'—'}</div>
+      <div id="ppe_${idx}" class="ppe-tags">${renderPPETags(existing?.ppe||[])}</div>
+      <div id="signal_${idx}" style="font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;margin-top:4px;" class="signal-${existing?.signal_word||''}">${existing?.signal_word||''}</div>
+    </div>
+    <div>
+      <label>Rate</label>
+      <input type="text" id="rate_${idx}" placeholder='e.g. 32 oz/ac' value="${existing?.rate||''}">
+    </div>
+    <div>
+      <label>Unit</label>
+      <select id="unit_${idx}">
+        <option value="oz/ac" ${existing?.unit==='oz/ac'?'selected':''}>oz/ac</option>
+        <option value="pt/ac" ${existing?.unit==='pt/ac'?'selected':''}>pt/ac</option>
+        <option value="qt/ac" ${existing?.unit==='qt/ac'?'selected':''}>qt/ac</option>
+        <option value="gal/ac" ${existing?.unit==='gal/ac'?'selected':''}>gal/ac</option>
+        <option value="lb/ac" ${existing?.unit==='lb/ac'?'selected':''}>lb/ac</option>
+        <option value="fl oz/ac" ${existing?.unit==='fl oz/ac'?'selected':''}>fl oz/ac</option>
+      </select>
+    </div>
+    <button class="remove-btn" style="background:transparent;border:1px solid var(--border-lt);border-radius:3px;color:var(--red);font-size:18px;height:38px;width:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:20px;flex-shrink:0;" onclick="this.closest('.product-row').remove()">×</button>
+  `;
+  document.getElementById('productRows').appendChild(row);
+}
+
+function onProductSelect(idx, sel) {
+  const opt = sel.selectedOptions[0];
+  const customInput = document.getElementById(`customName_${idx}`);
+  if (sel.value === '__custom') {
+    customInput.classList.remove('hidden');
+    document.getElementById(`epa_${idx}`).textContent = 'EPA #: —';
+    document.getElementById(`ppe_${idx}`).innerHTML = '';
+    document.getElementById(`signal_${idx}`).textContent = '';
+    return;
+  }
+  customInput.classList.add('hidden');
+  const epa = opt.dataset.epa || '—';
+  const ppe = JSON.parse(opt.dataset.ppe || '[]');
+  const signal = opt.dataset.signal || '';
+  document.getElementById(`epa_${idx}`).textContent = `EPA #: ${epa}`;
+  document.getElementById(`ppe_${idx}`).innerHTML = renderPPETags(ppe);
+  const sigEl = document.getElementById(`signal_${idx}`);
+  sigEl.textContent = signal;
+  sigEl.className = `signal-${signal}`;
+}
+
+function renderPPETags(ppe) {
+  return (ppe||[]).map(p => `<span class="ppe-tag">${p}</span>`).join('');
+}
+
+function getProductsFromForm() {
+  const rows = document.querySelectorAll('.product-row');
+  const products = [];
+  rows.forEach(row => {
+    const idx = row.dataset.idx;
+    const sel = row.querySelector('select');
+    if (!sel) return;
+    const opt = sel.selectedOptions[0];
+    const isCustom = sel.value === '__custom';
+    const name = isCustom
+      ? (document.getElementById(`customName_${idx}`)?.value || '')
+      : (opt?.textContent || '');
+    if (!name) return;
+    products.push({
+      chemical_id: isCustom ? null : sel.value,
+      name,
+      epa_number: isCustom ? '' : (opt?.dataset.epa || ''),
+      ppe: isCustom ? [] : JSON.parse(opt?.dataset.ppe || '[]'),
+      signal_word: isCustom ? '' : (opt?.dataset.signal || ''),
+      rate: document.getElementById(`rate_${idx}`)?.value || '',
+      unit: document.getElementById(`unit_${idx}`)?.value || ''
+    });
+  });
+  return products;
+}
+
+function buildLogPayload(status) {
+  const products = getProductsFromForm();
+  const sig = getActiveSig();
+  return {
+    owner_id: currentUser.id,
+    customer_id: document.getElementById('log_customerId')?.value || null,
+    is_own_farm: (userProfile?.mode !== 'custom_applicator'),
+    applicator_name: document.getElementById('log_appName').value,
+    applicator_address: document.getElementById('log_appAddr').value,
+    applicator_city: document.getElementById('log_appCity').value,
+    applicator_state: document.getElementById('log_appState').value,
+    applicator_zip: document.getElementById('log_appZip').value,
+    applicator_cert_number: document.getElementById('log_appCert').value,
+    applicator_signature: sig,
+    equipment_used: document.getElementById('log_equipment').value,
+    commodity_applied_to: document.getElementById('log_commodity').value,
+    pest_controlled: document.getElementById('log_pest').value,
+    water_per_acre: parseFloat(document.getElementById('log_water').value)||null,
+    application_date: document.getElementById('log_appDate').value || null,
+    application_time: document.getElementById('log_startTime').value || null,
+    stop_time: document.getElementById('log_stopTime').value || null,
+    acres: parseFloat(document.getElementById('log_acres').value)||null,
+    legal_description: document.getElementById('log_legals').value,
+    pesticide_supplier: document.getElementById('log_supplier').value,
+    notification_name: document.getElementById('log_notification').value,
+    wind_speed: parseFloat(document.getElementById('log_windSpeed').value)||null,
+    wind_direction: document.getElementById('log_windDir').value,
+    temperature: parseFloat(document.getElementById('log_temp').value)||null,
+    field_map_notes: document.getElementById('log_fieldNotes').value,
+    products,
+    status
+  };
+}
+
+async function saveDraft() {
+  const payload = buildLogPayload('draft');
+  let error;
+  if (editingLogId) {
+    ({ error } = await sb.from('spray_logs').update(payload).eq('id', editingLogId));
+  } else {
+    const { data, error: e } = await sb.from('spray_logs').insert(payload).select().single();
+    error = e;
+    if (data) editingLogId = data.id;
+  }
+  if (error) { alert('Save failed: ' + error.message); return; }
+  await loadLogs();
+  alert('Draft saved.');
+}
+
+async function completeLog() {
+  const payload = buildLogPayload('complete');
+  let error;
+  if (editingLogId) {
+    ({ error } = await sb.from('spray_logs').update(payload).eq('id', editingLogId));
+  } else {
+    const { data, error: e } = await sb.from('spray_logs').insert(payload).select().single();
+    error = e;
+    if (data) editingLogId = data.id;
+  }
+  if (error) { alert('Save failed: ' + error.message); return; }
+  await loadLogs();
+  switchTab('logs');
+}
+
+// ══════════════════════════════════════════════════════
+// WEATHER
+// ══════════════════════════════════════════════════════
+async function fetchWeather() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude: lat, longitude: lon } = pos.coords;
+    if (OWM_KEY === 'YOUR_OPENWEATHERMAP_KEY') {
+      document.getElementById('weatherAutoStrip').classList.add('hidden');
+      return;
+    }
+    try {
+      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OWM_KEY}&units=imperial`);
+      const d = await res.json();
+      const windSpeed = d.wind?.speed?.toFixed(1);
+      const windDeg = d.wind?.deg;
+      const temp = d.main?.temp?.toFixed(1);
+      const windDir = degToCompass(windDeg);
+
+      document.getElementById('wx_wind').textContent = windSpeed + ' mph';
+      document.getElementById('wx_dir').textContent = windDir;
+      document.getElementById('wx_temp').textContent = temp + '°F';
+      document.getElementById('weatherAutoStrip').classList.remove('hidden');
+
+      // Also fill manual fields
+      document.getElementById('log_windSpeed').value = windSpeed;
+      document.getElementById('log_windDir').value = windDir;
+      document.getElementById('log_temp').value = Math.round(temp);
+    } catch(e) { console.error('Weather fetch failed', e); }
+  }, () => {});
+}
+
+function degToCompass(deg) {
+  if (deg == null) return '—';
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+// ══════════════════════════════════════════════════════
+// SIGNATURE PADS
+// ══════════════════════════════════════════════════════
+let sigPad = null, profileSigPad = null;
+
+function initSignaturePads() {
+  sigPad = initPad('sigCanvas');
+  profileSigPad = initPad('profileSigCanvas');
+  // Load profile sig onto profile canvas if exists
+  if (userProfile?.signature_data) {
+    const img = new Image();
+    img.onload = () => profileSigPad.ctx.drawImage(img, 0, 0);
+    img.src = userProfile.signature_data;
+  }
+}
+
+function initPad(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+  canvas.width = canvas.offsetWidth || 460;
+  canvas.height = 140;
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+  let lastX = 0, lastY = 0;
+
+  const getPos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    if (e.touches) {
+      return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY };
+    }
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  };
+
+  const start = e => { drawing=true; const p=getPos(e); lastX=p.x; lastY=p.y; e.preventDefault(); };
+  const move = e => {
+    if (!drawing) return; e.preventDefault();
+    const p = getPos(e);
+    ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle='#1A1208'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.stroke();
+    lastX=p.x; lastY=p.y;
+  };
+  const end = () => { drawing=false; };
+
+  canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',move); canvas.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); canvas.addEventListener('touchend',end);
+  return { canvas, ctx, getDataURL: () => canvas.toDataURL('image/png'), clear: () => ctx.clearRect(0,0,canvas.width,canvas.height) };
+}
+
+function clearSigCanvas() { sigPad?.clear(); }
+function clearProfileSig() { profileSigPad?.clear(); document.getElementById('profileSigSaved').classList.add('hidden'); }
+
+async function saveSigToProfile() {
+  if (!sigPad) return;
+  const data = sigPad.getDataURL();
+  await sb.from('profiles').update({ signature_data: data }).eq('id', currentUser.id);
+  if (!userProfile) userProfile = {};
+  userProfile.signature_data = data;
+  document.getElementById('sigExisting').classList.remove('hidden');
+  document.getElementById('sigCapture').classList.add('hidden');
+  document.getElementById('sigPreviewImg').src = data;
+  alert('Signature saved to profile.');
+}
+
+async function saveProfileSigFromCanvas() {
+  if (!profileSigPad) return;
+  const data = profileSigPad.getDataURL();
+  await sb.from('profiles').update({ signature_data: data }).eq('id', currentUser.id);
+  if (!userProfile) userProfile = {};
+  userProfile.signature_data = data;
+  document.getElementById('profileSigSaved').classList.remove('hidden');
+  document.getElementById('profileSigImg').src = data;
+  alert('Signature saved.');
+}
+
+function clearSavedSig() {
+  document.getElementById('sigExisting').classList.add('hidden');
+  document.getElementById('sigCapture').classList.remove('hidden');
+}
+
+function getActiveSig() {
+  if (userProfile?.signature_data) return userProfile.signature_data;
+  if (document.getElementById('sigDrawPanel')?.style.display !== 'none') {
+    return sigPad?.getDataURL() || null;
+  }
+  const img = document.getElementById('sigUploadPreview');
+  if (!img.classList.contains('hidden')) return img.src;
+  return null;
+}
+
+function setSigTab(tab) {
+  document.getElementById('sigDrawPanel').classList.toggle('hidden', tab!=='draw');
+  document.getElementById('sigUploadPanel').classList.toggle('hidden', tab!=='upload');
+  document.getElementById('sigTabDraw').className = tab==='draw' ? 'btn btn-outline btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('sigTabUpload').className = tab==='upload' ? 'btn btn-outline btn-sm' : 'btn btn-ghost btn-sm';
+}
+
+function handleSigUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = document.getElementById('sigUploadPreview');
+    img.src = ev.target.result;
+    img.classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══════════════════════════════════════════════════════
+// FIELD MAP CANVAS
+// ══════════════════════════════════════════════════════
+let mapPad = null;
+function initMapCanvas() {
+  const canvas = document.getElementById('fieldMapCanvas');
+  if (!canvas || mapPad) return;
+  canvas.width = canvas.offsetWidth || 900;
+  canvas.height = 180;
+  mapPad = initPad('fieldMapCanvas');
+}
+function clearMapCanvas() { mapPad?.clear(); }
+
+// ══════════════════════════════════════════════════════
+// PRINT
+// ══════════════════════════════════════════════════════
+function printLog() { window.print(); }
+
+// ══════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ══════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  const tabEl = document.getElementById('tab-' + tab);
+  const navEl = document.querySelector(`[data-tab="${tab}"]`);
+  if (tabEl) tabEl.classList.remove('hidden');
+  if (navEl) navEl.classList.add('active');
+  if (tab === 'newlog') {
+    if (!editingLogId) initNewLogForm();
+    setTimeout(() => { initMapCanvas(); if(!sigPad) initSignaturePads(); }, 100);
+  }
+  if (tab === 'chemicals') renderChemicalsTable();
+  if (tab === 'customers') renderCustomersList();
+  if (tab === 'logs') { loadLogs(); }
+}
+
+// ══════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════
+function formatDate(str) {
+  if (!str) return '—';
+  return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ══════════════════════════════════════════════════════
+// INIT — Check session on load
+// ══════════════════════════════════════════════════════
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    await bootApp(session.user);
+  }
+})();
+</script>
+</body>
+</html>
