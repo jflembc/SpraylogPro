@@ -6,6 +6,7 @@
 <title>SprayLog Pro — Pesticide Application Records</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* ══════════════════════════════════════════════
    DESIGN TOKENS
@@ -2399,21 +2400,63 @@ async function uploadSelectedToDrive() {
   }
 }
 
-// Google Drive OAuth + Files API
+// Google Drive OAuth — using Google Identity Services (no redirect URI needed)
 let gdriveToken = null;
+let gdriveTokenClient = null;
 const GDRIVE_CLIENT_ID = '1034458166251-mbonpmo3mas5qulslmrfpn3iisc37bm8.apps.googleusercontent.com';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
-async function initGoogleDriveAPI() {
-  // Check if we have a stored token
-  const stored = localStorage.getItem('gdrive_token');
-  if (stored) {
-    const parsed = JSON.parse(stored);
-    if (parsed.expires > Date.now()) {
-      gdriveToken = parsed.token;
-      return;
+// Called after GIS library loads
+function initTokenClient() {
+  if (!window.google || !window.google.accounts) return;
+  gdriveTokenClient = window.google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID,
+    scope: GDRIVE_SCOPE,
+    callback: (response) => {
+      if (response.error) {
+        toast('Google sign-in failed: ' + response.error, 'warn');
+        return;
+      }
+      gdriveToken = response.access_token;
+      // Store with expiry (tokens last 1 hour)
+      localStorage.setItem('gdrive_token', JSON.stringify({
+        token: response.access_token,
+        expires: Date.now() + 3500000
+      }));
+      closeGDriveAuthModal();
+      toast('✓ Google Drive connected!');
+      // Retry the upload that triggered auth
+      uploadSelectedToDrive();
     }
-  }
+  });
+}
+
+// Init token client once GIS library is ready
+window.addEventListener('load', () => {
+  // GIS loads async — poll briefly
+  let attempts = 0;
+  const check = setInterval(() => {
+    attempts++;
+    if (window.google && window.google.accounts) {
+      initTokenClient();
+      clearInterval(check);
+    }
+    if (attempts > 20) clearInterval(check);
+  }, 300);
+});
+
+async function initGoogleDriveAPI() {
+  // Check stored token
+  try {
+    const stored = localStorage.getItem('gdrive_token');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.expires > Date.now()) {
+        gdriveToken = parsed.token;
+        return;
+      }
+    }
+  } catch(e) { /* ignore */ }
   throw new Error('NOT_SIGNED_IN');
 }
 
@@ -2426,36 +2469,17 @@ function closeGDriveAuthModal() {
 }
 
 function connectGoogleDrive() {
-  if (GDRIVE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
-    toast('Google Drive connection requires setup. See profile settings.', 'warn');
-    closeGDriveAuthModal();
-    return;
-  }
-  const params = new URLSearchParams({
-    client_id: GDRIVE_CLIENT_ID,
-    redirect_uri: window.location.origin + '/oauth-callback',
-    response_type: 'token',
-    scope: GDRIVE_SCOPE,
-    prompt: 'consent'
-  });
-  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
-  const popup = window.open(authUrl, 'gdrive_auth', 'width=500,height=600');
-
-  // Listen for OAuth callback
-  window.addEventListener('message', function handler(e) {
-    if (e.data && e.data.type === 'gdrive_token') {
-      gdriveToken = e.data.token;
-      localStorage.setItem('gdrive_token', JSON.stringify({
-        token: e.data.token,
-        expires: Date.now() + (e.data.expires_in * 1000) - 60000
-      }));
-      window.removeEventListener('message', handler);
-      closeGDriveAuthModal();
-      toast('✓ Google Drive connected!');
-      // Retry upload
-      uploadSelectedToDrive();
+  closeGDriveAuthModal();
+  if (!gdriveTokenClient) {
+    // GIS not loaded yet — try initialising
+    initTokenClient();
+    if (!gdriveTokenClient) {
+      toast('Google sign-in not ready. Please try again in a moment.', 'warn');
+      return;
     }
-  });
+  }
+  // This opens the Google consent popup — no redirect URI required
+  gdriveTokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
 async function uploadFileToDrive(filename, content) {
@@ -2559,8 +2583,7 @@ function formatDate(str) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeGDriveAuthModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="connectGoogleDrive()" style="background:#4285F4;color:#fff;">
-        <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      <button class="btn btn-primary" onclick="connectGoogleDrive()" style="background:#4285F4;color:#fff;border:none;">
         Sign in with Google
       </button>
     </div>
