@@ -315,14 +315,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 /* ══ LOG SELECTION ══ */
 .log-selected{border-color:var(--amber) !important;background:var(--amber-bg) !important;}
 .log-checkbox{
-  width:26px;height:26px;border-radius:4px;
-  border:2px solid var(--border-dk);background:var(--surface);
+  width:30px;height:30px;border-radius:5px;
+  border:2.5px solid var(--border-dk);background:var(--surface);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  cursor:pointer;transition:.15s;
+  cursor:pointer;transition:all .15s;margin-right:12px;
 }
 .log-checkbox.checked{background:var(--amber);border-color:var(--amber);}
-.log-checkbox.checked::after{content:'✓';color:#fff;font-size:14px;font-weight:700;}
+.log-checkbox.checked::after{content:'✓';color:#fff;font-size:16px;font-weight:900;line-height:1;}
 .log-check-wrap{display:flex;align-items:center;}
+.log-selected .log-checkbox{box-shadow:0 0 0 3px rgba(181,112,15,.25);}
 
 /* ══ LOG LIST CARDS ══ */
 .log-card{
@@ -1492,36 +1493,45 @@ function renderLogsList() {
   const el = document.getElementById('logsList');
   const sub = document.getElementById('logSubtitle');
   if (!el) return;
-  sub.textContent = `${allLogs.length} record${allLogs.length !== 1 ? 's' : ''} on file`;
+  sub.textContent = allLogs.length + ' record' + (allLogs.length !== 1 ? 's' : '') + ' on file';
   if (!allLogs.length) {
-    el.innerHTML = '<div class="empty"><div class="ei">📋</div><p>No records yet. Start your first application record.</p><button class="btn btn-primary" onclick="switchTab(\'newlog\')">+ New Record</button></div>';
+    el.innerHTML = '<div class="empty"><div class="ei">📋</div><p>No records yet. Start your first application record.</p><button class="btn btn-primary" onclick="switchTab(&quot;newlog&quot;)">+ New Record</button></div>';
     return;
   }
   el.innerHTML = '';
   allLogs.forEach(log => {
+    const isSelected = selectedLogIds.has(log.id);
     const div = document.createElement('div');
-    div.className = 'log-card';
+    div.className = 'log-card' + (isSelected ? ' log-selected' : '');
+    div.dataset.logId = log.id;
     const prods = (log.products || []).map(p => p.name).join(', ');
-    div.innerHTML = `
-      <div class="lc-head">
-        <span class="lc-name">${log.commodity_applied_to || 'Application Record'}</span>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <span class="status-badge status-${log.status||'draft'}">${log.status||'draft'}</span>
-          <span class="lc-date">${log.application_date || formatDate(log.created_at)}</span>
-        </div>
-      </div>
-      <div class="lc-meta">
-        ${log.acres ? log.acres+' acres' : ''} ${log.legal_description ? '· '+log.legal_description : ''}<br>
-        ${prods ? 'Products: '+prods : 'No products added yet'}
-      </div>
-    `;
-    div.onclick = (e) => {
+
+    const checkboxHTML = selectModeActive
+      ? '<div class="log-checkbox' + (isSelected ? ' checked' : '') + '"></div>'
+      : '';
+
+    div.innerHTML =
+      '<div class="lc-head" style="align-items:center;gap:10px;">' +
+        checkboxHTML +
+        '<span class="lc-name" style="flex:1;">' + (log.commodity_applied_to || 'Application Record') + '</span>' +
+        '<div style="display:flex;gap:6px;align-items:center;">' +
+          '<span class="status-badge status-' + (log.status||'draft') + '">' + (log.status||'draft') + '</span>' +
+          '<span class="lc-date">' + (log.application_date || formatDate(log.created_at)) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="lc-meta" style="' + (selectModeActive ? 'padding-left:40px;' : '') + '">' +
+        (log.acres ? log.acres+' acres' : '') + (log.legal_description ? ' · '+log.legal_description : '') + '<br>' +
+        (prods ? 'Products: '+prods : 'No products added yet') +
+      '</div>';
+
+    div.onclick = function(e) {
       if (selectModeActive) { toggleLogSelection(log.id, e); return; }
       viewLog(log.id);
     };
     el.appendChild(div);
   });
 }
+
 
 function viewLog(id) {
   currentViewLogId = id;
@@ -2330,13 +2340,14 @@ function toggleLogSelection(logId, e) {
   if (selectedLogIds.has(logId)) selectedLogIds.delete(logId);
   else selectedLogIds.add(logId);
   updateSelectionCount();
-  // Update visual state
-  const cards = document.querySelectorAll('.log-card');
-  cards.forEach(c => {
-    if (c.dataset.logId === logId) {
-      c.classList.toggle('log-selected', selectedLogIds.has(logId));
-    }
-  });
+  // Update just this card's visual — faster than full re-render
+  const card = document.querySelector(`.log-card[data-log-id="${logId}"]`);
+  if (card) {
+    const selected = selectedLogIds.has(logId);
+    card.classList.toggle('log-selected', selected);
+    const cb = card.querySelector('.log-checkbox');
+    if (cb) cb.classList.toggle('checked', selected);
+  }
 }
 
 function buildLogCSV(log) {
