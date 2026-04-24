@@ -33,14 +33,14 @@
   --signal-warning: #C8802A;
   --signal-caution: #807020;
 
-  /* SIZING SCALE — larger for readability */
-  --text-xs:   13px;
-  --text-sm:   15px;
-  --text-base: 17px;
-  --text-lg:   20px;
-  --text-xl:   24px;
-  --radius:    5px;
-  --touch:     52px;   /* min tap target */
+  /* SIZING SCALE — optimized for 55+ farmers */
+  --text-xs:   14px;
+  --text-sm:   16px;
+  --text-base: 18px;
+  --text-lg:   22px;
+  --text-xl:   26px;
+  --radius:    6px;
+  --touch:     56px;   /* min tap target — bigger for arthritic hands */
 }
 
 /* ══ RESET ══ */
@@ -174,8 +174,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;o
 label{
   display:block;
   font-family:'IBM Plex Sans',sans-serif;
-  font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
-  color:var(--muted);margin-bottom:7px;
+  font-size:14px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;
+  color:#5A4A30;margin-bottom:8px;
 }
 input[type=text],
 input[type=number],
@@ -183,26 +183,27 @@ input[type=email],
 input[type=password],
 input[type=date],
 input[type=time],
-select,
-textarea{
+select,textarea{
   width:100%;
   background:var(--paper-dk);
   border:2px solid var(--border-lt);
   border-radius:var(--radius);
-  padding:13px 14px;
+  padding:12px 14px;
   font-family:'IBM Plex Sans',sans-serif;
   font-size:var(--text-base);
-  color:var(--ink);
+  color:#1A1208;
   outline:none;
-  transition:border-color .15s;
-  appearance:none;
-  -webkit-appearance:none;
-  min-height:var(--touch);
+  transition:border-color .15s, box-shadow .15s;
   line-height:1.4;
+  -webkit-appearance:none;
 }
-input:focus,select:focus,textarea:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(212,136,42,.15);}
-input[readonly]{opacity:.5;cursor:not-allowed;}
-textarea{min-height:80px;resize:vertical;}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--amber);
+  box-shadow:0 0 0 3px rgba(212,136,42,.2);
+}
+input[readonly]{opacity:.6;cursor:not-allowed;background:#E8DFC8;}
+textarea{resize:vertical;min-height:80px;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235A4A30' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px;}
 
 /* Dark-mode inputs (inside dark cards) */
 .card-dark input[type=text],
@@ -366,11 +367,85 @@ textarea{min-height:80px;resize:vertical;}
 
 /* ══ PRINT ══ */
 @media print{
-  #appHeader,#mobileNav,.btn,.cert-banner{display:none!important;}
-  body{background:#fff;color:#000;font-size:13px;}
-  .card,.card-dark{background:#fff!important;border:1px solid #ccc!important;color:#000!important;page-break-inside:avoid;}
-  label{color:#444!important;}
-  input,select{border:1px solid #999!important;background:#fff!important;color:#000!important;}
+  /* ── HIDE EVERYTHING EXCEPT THE RECORD FORM ── */
+  #appHeader,#mobileNav,#certBanner,
+  .btn,.modal-overlay,
+  #tab-logs,#tab-customers,#tab-chemicals,#tab-summary,#tab-profile,
+  .card > .sec-label + p,
+  #customerBar,
+  #weatherAutoStrip button,
+  .sig-btns,
+  .flex-between > .flex-gap,
+  #fieldMapCanvas,
+  .field-map-box,
+  #log_fieldNotes + *
+  { display:none !important; }
+
+  /* ── PAGE SETUP — single page ── */
+  @page { size: letter portrait; margin: 0.45in 0.5in; }
+  html,body { background:#fff !important; color:#000 !important; font-size:10pt; }
+
+  /* ── SHOW THE NEW LOG TAB ── */
+  #app,#appMain,#tab-newlog { display:block !important; }
+  #appMain { padding:0 !important; max-width:100% !important; }
+  #tab-newlog { display:block !important; }
+
+  /* ── PRINT HEADER ── */
+  #printHeader { display:block !important; }
+
+  /* ── KILL DARK BACKGROUNDS, BORDERS ── */
+  .card,.card-dark,.card-dark *,.weather-strip,
+  .product-row,.product-row * {
+    background:#fff !important;
+    border-color:#ccc !important;
+    color:#000 !important;
+    box-shadow:none !important;
+  }
+  .sec-label { color:#444 !important; border-bottom-color:#ccc !important; font-size:7pt !important; letter-spacing:1.5px; }
+  label { color:#444 !important; font-size:7pt !important; }
+  input,select,textarea { background:#fff !important; border:1px solid #bbb !important; color:#000 !important; font-size:9pt !important; padding:2px 4px !important; }
+  input[readonly] { opacity:1 !important; }
+
+  /* ── COMPACT LAYOUT ── */
+  .card,.card-dark { padding:6pt 8pt !important; margin-bottom:5pt !important; border:1px solid #ccc !important; border-radius:0 !important; }
+  .form-group { margin-bottom:4pt !important; }
+  .form-row { gap:6pt !important; margin-bottom:4pt !important; }
+
+  /* ── FORCE ALL GRIDS TO MULTI-COLUMN IN PRINT ── */
+  .c2 { grid-template-columns:1fr 1fr !important; }
+  .c3 { grid-template-columns:1fr 1fr 1fr !important; }
+  .c4 { grid-template-columns:1fr 1fr 1fr 1fr !important; }
+
+  /* ── PRODUCTS: compact table-like ── */
+  .product-row { grid-template-columns:2fr 1fr 80pt !important; gap:4pt !important; padding:4pt 6pt !important; border:1px solid #ddd !important; margin-bottom:3pt !important; }
+  .epa-display { font-size:8pt !important; }
+  .ppe-tags,.ppe-tag { display:none !important; }
+  #signal_0,#signal_1,#signal_2,#signal_3 { font-size:7pt !important; }
+  #labelRate_0,#labelRate_1,#labelRate_2,#labelRate_3 { font-size:7pt !important; }
+
+  /* ── WEATHER STRIP ── */
+  .weather-strip { flex-direction:row !important; flex-wrap:wrap; gap:12pt !important; padding:4pt 6pt !important; border:1px solid #ccc !important; }
+  .w-sep { display:block !important; width:1px; height:20pt; background:#ccc !important; }
+  .w-label { font-size:7pt !important; }
+  .w-val { font-size:9pt !important; color:#000 !important; }
+  .w-badge { font-size:7pt !important; }
+
+  /* ── SIGNATURE ── */
+  #sigExisting img { max-height:40pt !important; }
+  #sigCapture canvas { max-height:40pt !important; border:1px solid #ccc !important; }
+  #sigDrawPanel,#sigUploadPanel { break-inside:avoid; }
+
+  /* ── APPLICATOR CERT INFO ── */
+  #log_appName,#log_appCert { font-weight:700 !important; }
+
+  /* ── NO PAGE BREAKS INSIDE SECTIONS ── */
+  .card,.card-dark,.product-row { break-inside:avoid; page-break-inside:avoid; }
+
+  /* ── HIDE FIELD MAP (saves huge space) ── */
+  .field-map-box { display:none !important; }
+
+  /* ── FIELD NOTES: small ── */
+  #log_fieldNotes { font-size:8pt !important; min-height:20pt !important; height:24pt !important; }
 }
 
 /* ══ TABLE ══ */
@@ -398,71 +473,121 @@ textarea{min-height:80px;resize:vertical;}
 .field-map-label.w{left:6px;top:50%;transform:translateY(-50%);}
 #fieldMapCanvas{display:block;width:100%;height:220px;touch-action:none;}
 
-/* ══ RESPONSIVE — TABLET (601–1024px) ══ */
-@media(min-width:601px) and (max-width:1024px){
-  :root{--text-base:16px;--text-sm:14px;}
-  #appMain{padding:20px 16px 32px;}
-  .c4{grid-template-columns:1fr 1fr;}
-  .results-grid{grid-template-columns:repeat(3,1fr);}
-}
+
 
 /* ══ RESPONSIVE — MOBILE (≤600px) ══ */
 @media(max-width:600px){
-  :root{--text-base:17px;--text-sm:15px;--text-lg:19px;--touch:56px;}
+  :root{
+    --text-xs:14px;--text-sm:16px;--text-base:18px;
+    --text-lg:21px;--touch:60px;
+  }
 
-  /* Hide desktop header tabs on mobile — use bottom nav instead */
+  /* Hide desktop nav — use bottom nav */
   .nav-tabs{display:none;}
   .hdr-brand{border-right:none;margin-right:0;}
-  #appHeader{padding:0 16px;min-height:54px;}
-  .hdr-brand h1{font-size:26px;}
+  #appHeader{padding:0 14px;min-height:52px;}
+  .hdr-brand h1{font-size:24px;}
   .hdr-brand .sub{display:none;}
+  .mode-badge{font-size:12px;padding:6px 10px;}
+  .user-btn{font-size:12px;padding:6px 10px;}
 
-  /* Show bottom nav */
+  /* Bottom nav — bigger, clear icons */
   #mobileNav{display:block;}
-  /* Extra bottom padding so content doesn't hide behind bottom nav */
-  #appMain{padding:16px 12px 88px;}
+  .mob-tab{min-height:62px;padding:10px 2px 10px;font-size:12px;}
+  .mob-tab .mob-icon{font-size:26px;}
+  #appMain{padding:14px 12px 90px;}
 
-  /* Stack all grids */
-  .c2,.c3,.c4{grid-template-columns:1fr;}
-  .form-row{gap:12px;}
+  /* Stack all grids single column */
+  .c2,.c3,.c4{grid-template-columns:1fr !important;}
+  .form-row{gap:10px;margin-bottom:10px;}
   .results-grid{grid-template-columns:1fr 1fr;}
-  .modal-actions{flex-direction:column-reverse;}
-  .modal-actions .btn{width:100%;}
 
-  /* Product rows stack on mobile */
-  .product-row{grid-template-columns:1fr;}
-  .remove-row-btn{margin-top:0;width:100%;height:48px;}
+  /* Modals: full-screen feel */
+  .modal-overlay{align-items:flex-end;padding:0;}
+  .modal{
+    border-radius:16px 16px 0 0;
+    padding:24px 18px 32px;
+    max-height:92vh;
+    max-width:100%;
+  }
+  .modal h2{font-size:28px;}
+  .modal-actions{flex-direction:column-reverse;gap:8px;}
+  .modal-actions .btn{width:100%;justify-content:center;min-height:var(--touch);}
 
-  /* Bigger tap targets */
-  .btn{min-height:var(--touch);font-size:var(--text-base);}
-  .auth-tab{padding:14px 12px 16px;font-size:var(--text-base);}
-  .nav-tab{min-height:var(--touch);}
+  /* Product rows: clearly separated sections */
+  .product-row{
+    grid-template-columns:1fr !important;
+    gap:10px;
+    padding:16px;
+    background:#F9F4EA;
+    border:2px solid var(--border-lt);
+    border-radius:8px;
+    margin-bottom:12px;
+  }
+  .remove-product-btn{
+    width:100% !important;height:52px !important;
+    font-size:16px !important;
+    border-radius:6px !important;
+    margin-top:4px;
+  }
 
-  /* Table: horizontal scroll */
-  .data-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .data-table{min-width:600px;}
-  .data-table th,.data-table td{padding:12px 10px;white-space:nowrap;}
+  /* Bigger tap targets everywhere */
+  .btn{min-height:var(--touch);font-size:var(--text-base);padding:12px 20px;}
+  .auth-tab{padding:16px 12px 18px;font-size:var(--text-base);}
+  input,select,textarea{font-size:16px !important; /* prevent iOS zoom */ padding:13px 14px !important;}
+  select{padding-right:42px !important;}
 
-  /* Cards full bleed */
-  .card,.card-dark{padding:16px 14px;margin-bottom:14px;}
-  .modal{padding:20px 16px;}
-  .modal h2{font-size:26px;}
+  /* Log cards — larger, easier to tap */
+  .log-card{padding:18px 16px;margin-bottom:12px;}
+  .log-card .lc-name{font-size:22px;line-height:1.2;}
+  .log-card .lc-meta{font-size:14px;line-height:1.7;}
+  .log-card .lc-date{font-size:13px;}
+  .status-badge{font-size:10px;padding:4px 10px;}
 
-  /* Weather stack */
-  .weather-strip{flex-direction:column;align-items:flex-start;gap:12px;}
+  /* Cards */
+  .card,.card-dark{padding:16px 14px;margin-bottom:12px;}
+
+  /* Table: horizontal scroll with clear indicator */
+  .data-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;
+    border-radius:var(--radius);box-shadow:inset -8px 0 12px -8px rgba(0,0,0,.3);}
+  .data-table{min-width:620px;}
+  .data-table th,.data-table td{padding:12px 10px;font-size:13px;}
+
+  /* Weather: clear, large numbers */
+  .weather-strip{flex-wrap:wrap;gap:14px;padding:14px;}
   .w-sep{display:none;}
-  .w-item{flex-direction:row;align-items:center;gap:12px;}
-  .w-val{font-size:var(--text-base);}
+  .w-item{flex-direction:column;align-items:flex-start;gap:3px;min-width:70px;}
+  .w-label{font-size:10px;}
+  .w-val{font-size:20px;font-weight:700;}
+  .w-badge{font-size:11px;}
 
-  /* Log cards */
-  .log-card{padding:16px;}
-  .log-card .lc-name{font-size:22px;}
+  /* Cert banner: stacked */
+  .cert-banner-inner{flex-direction:column;align-items:flex-start;gap:10px;}
 
-  /* KPI grid: 2 col on phone */
-  #summaryKPIs{grid-template-columns:1fr 1fr!important;}
+  /* KPI boxes 2-up */
+  #summaryKPIs{grid-template-columns:1fr 1fr !important;}
+  .r-box .rv{font-size:26px;}
+  .r-box .rl{font-size:10px;}
 
-  /* Cert banner */
-  .cert-banner-inner{flex-direction:column;align-items:flex-start;gap:8px;}
+  /* Signature canvas full width */
+  #sigCanvas{height:120px !important;}
+  #fieldMapCanvas{height:160px !important;}
+
+  /* Section labels bigger on mobile */
+  .sec-label{font-size:12px;letter-spacing:2px;padding-bottom:10px;margin-bottom:14px;}
+}
+
+/* ══ RESPONSIVE — TABLET (601–1024px) ══ */
+@media(min-width:601px) and (max-width:1024px){
+  :root{--text-base:17px;--text-sm:15px;}
+  #appMain{padding:22px 18px 36px;}
+  .c3{grid-template-columns:1fr 1fr !important;}
+  .c4{grid-template-columns:1fr 1fr !important;}
+  .results-grid{grid-template-columns:repeat(2,1fr);}
+  .btn{min-height:52px;}
+  input,select{font-size:16px !important;}
+  .data-table th{font-size:11px;}
+  .log-card .lc-name{font-size:21px;}
 }
 
 /* ══ PC / LARGE SCREEN (>1024px) ══ */
@@ -605,6 +730,18 @@ textarea{min-height:80px;resize:vertical;}
 
     <!-- ══ NEW/EDIT LOG TAB ══ -->
     <div id="tab-newlog" class="tab-content hidden">
+  <!-- PRINT-ONLY HEADER -->
+  <div id="printHeader" style="display:none;margin-bottom:8pt;border-bottom:2px solid #333;padding-bottom:6pt;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+      <div>
+        <div style="font-family:serif;font-size:16pt;font-weight:900;letter-spacing:1px;">PESTICIDE APPLICATION RECORD</div>
+        <div style="font-size:8pt;color:#555;margin-top:2pt;">SprayLog Pro — Confidential Agricultural Record</div>
+      </div>
+      <div style="text-align:right;font-size:8pt;color:#555;">
+        <div>Printed: <span id="printDate"></span></div>
+      </div>
+    </div>
+  </div>
       <div class="flex-between">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--amber);letter-spacing:1px;" id="logFormTitle">New Application Record</div>
         <div class="flex-gap">
@@ -1877,7 +2014,11 @@ function clearMapCanvas() { mapPad?.clear(); }
 // ══════════════════════════════════════════════════════
 // PRINT
 // ══════════════════════════════════════════════════════
-function printLog() { window.print(); }
+function printLog() {
+  const pd = document.getElementById('printDate');
+  if (pd) pd.textContent = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  window.print();
+}
 
 // ══════════════════════════════════════════════════════
 // TAB NAVIGATION
