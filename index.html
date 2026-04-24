@@ -1452,13 +1452,13 @@ function addProductRow(existing) {
     const rateMax = c.rate_max != null ? c.rate_max : '';
     const rateUnit = c.rate_unit || 'fl oz/ac';
     const rateNotes = (c.rate_notes || '').replace(/'/g, '&apos;');
-    const ppeJson = JSON.stringify(c.ppe_requirements || []).replace(/'/g, '&apos;');
+    const ppeJson = JSON.stringify(c.ppe_requirements || []).replace(/"/g, '&quot;');
     return '<option value="' + c.id + '" data-epa="' + (c.epa_number||'') + '" data-ppe="' + ppeJson + '" data-rei="' + (c.rei_hours||0) + '" data-signal="' + (c.signal_word||'') + '" data-rate-min="' + rateMin + '" data-rate-max="' + rateMax + '" data-rate-unit="' + rateUnit + '" data-rate-notes="' + rateNotes + '" ' + sel + '>' + c.name + '</option>';
   }).join('');
   row.innerHTML =
     '<div>' +
     '<label>Product</label>' +
-    '<select onchange="onProductSelect(' + idx + ',this)" data-row="' + idx + '">' +
+    '<select id="chemSel_' + idx + '" data-row="' + idx + '">' +
     '<option value="">— Select Product —</option>' +
     '<optgroup label="Common Chemicals">' + chemOpts + '</optgroup>' +
     '<option value="__custom">+ Type Custom Name</option>' +
@@ -1486,12 +1486,25 @@ function addProductRow(existing) {
     '<option value="lb/100 gal"' + (existing && existing.unit === 'lb/100 gal' ? ' selected' : '') + '>lb/100 gal</option>' +
     '</select>' +
     '</div>' +
-    '<button style="background:transparent;border:1px solid #C0A878;border-radius:3px;color:#C04040;font-size:18px;height:38px;width:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:20px;flex-shrink:0;" onclick="this.closest(&quot;.product-row&quot;).remove();toast(&quot;Product removed&quot;,&quot;warn&quot;)">×</button>';
+    '<button class="remove-product-btn" style="background:transparent;border:1px solid #C0A878;border-radius:3px;color:#C04040;font-size:18px;height:38px;width:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:20px;flex-shrink:0;">×</button>';
   document.getElementById('productRows').appendChild(row);
-  // If editing existing with a chemical_id, trigger the select to show rate
+  // Attach event listener after DOM insert (avoids CSP inline handler issues)
+  const chemSelEl = document.getElementById('chemSel_' + idx);
+  if (chemSelEl) {
+    chemSelEl.addEventListener('change', function() { onProductSelect(idx, this); });
+  }
+  // Wire remove button
+  const removeBtn = row.querySelector('.remove-product-btn');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', function() { row.remove(); });
+  }
+  // If editing existing with a chemical_id, trigger the select to show EPA/PPE
   if (existing && existing.chemical_id) {
-    const sel = row.querySelector('select');
-    if (sel) onProductSelect(idx, sel);
+    const selEl = document.getElementById('chemSel_' + idx);
+    if (selEl) {
+      selEl.value = existing.chemical_id;
+      onProductSelect(idx, selEl);
+    }
   }
 }
 
@@ -1509,7 +1522,7 @@ function onProductSelect(idx, sel) {
   if (!opt || !opt.value) return;
   customInput.classList.add('hidden');
   const epa = opt.dataset.epa || '—';
-  const ppe = JSON.parse(opt.dataset.ppe || '[]');
+  const ppe = (() => { try { return JSON.parse((opt.dataset.ppe || '[]').replace(/&quot;/g, '"')); } catch(e) { return []; } })();
   const signal = opt.dataset.signal || '';
   const rateMin = opt.dataset.rateMin;
   const rateMax = opt.dataset.rateMax;
@@ -1562,7 +1575,7 @@ function getProductsFromForm() {
       chemical_id: isCustom ? null : sel.value,
       name,
       epa_number: isCustom ? '' : (opt?.dataset.epa || ''),
-      ppe: isCustom ? [] : JSON.parse(opt?.dataset.ppe || '[]'),
+      ppe: isCustom ? [] : (() => { try { return JSON.parse((opt?.dataset.ppe || '[]').replace(/&quot;/g, '"')); } catch(e) { return []; } })(),
       signal_word: isCustom ? '' : (opt?.dataset.signal || ''),
       rate: document.getElementById(`rate_${idx}`)?.value || '',
       unit: document.getElementById(`unit_${idx}`)?.value || ''
