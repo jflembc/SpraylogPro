@@ -250,7 +250,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .btn-primary:hover,.btn-primary:active{background:var(--amber-lt);}
 .btn-outline{background:transparent;border:2px solid var(--amber);color:var(--amber);}
 .btn-outline:hover,.btn-outline:active{background:var(--amber);color:var(--soil);}
-.btn-ghost{background:transparent;border:2px dashed var(--border);color:var(--muted);font-size:var(--text-sm);}
+.btn-ghost{background:var(--bg-alt);border:2px solid var(--border-dk);color:var(--ink-2);font-size:var(--text-sm);}
 .btn-ghost:hover,.btn-ghost:active{border-color:var(--amber);color:var(--amber);background:var(--amber-bg);}
 .btn-danger{background:transparent;border:2px solid var(--red);color:var(--red);}
 .btn-danger:hover,.btn-danger:active{background:var(--red);color:#fff;}
@@ -266,25 +266,25 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 /* ══ RESULT / KPI BOXES ══ */
 .results-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
-.r-box{background:#080503;border:2px solid var(--border);border-radius:var(--radius);padding:18px 14px;text-align:center;}
-.r-box .rl{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;line-height:1.4;}
-.r-box .rv{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--paper);line-height:1;}
+.r-box{background:var(--surface);border:2px solid var(--border-dk);border-radius:var(--radius);padding:18px 14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.07);}
+.r-box .rl{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;line-height:1.4;font-weight:700;}
+.r-box .rv{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--ink);line-height:1;}
 .r-box.amber .rv{color:var(--amber);}
 .r-box.green .rv{color:var(--green);}
 .r-box.red .rv{color:var(--red);}
 
 /* ══ WEATHER STRIP ══ */
 .weather-strip{
-  display:flex;gap:14px;background:#080503;border:2px solid var(--border);
+  display:flex;gap:14px;background:var(--sky-bg);border:2px solid #B8D8E8;
   border-radius:var(--radius);padding:16px 20px;margin-bottom:18px;
   align-items:center;flex-wrap:wrap;
 }
 .w-item{display:flex;flex-direction:column;gap:4px;}
-.w-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
-.w-val{font-family:'IBM Plex Sans',sans-serif;font-size:var(--text-lg);font-weight:700;color:var(--amber-pale);}
+.w-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--sky);font-weight:700;}
+.w-val{font-family:'IBM Plex Sans',sans-serif;font-size:var(--text-lg);font-weight:700;color:var(--ink);}
 .w-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 10px;border-radius:3px;
-  background:rgba(61,122,69,.2);color:var(--green-lt);border:1px solid var(--green);}
-.w-sep{width:1px;height:40px;background:var(--border);}
+  background:var(--green-bg);color:var(--green);border:1px solid var(--green);font-weight:700;}
+.w-sep{width:1px;height:40px;background:var(--border-dk);}
 
 /* ══ PRODUCT ROWS ══ */
 .product-row{
@@ -311,9 +311,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 }
 .remove-row-btn:hover{background:var(--red);color:#fff;border-color:var(--red);}
 
+/* ══ LOG SELECTION ══ */
+.log-selected{border-color:var(--amber) !important;background:var(--amber-bg) !important;}
+.log-checkbox{
+  width:26px;height:26px;border-radius:4px;
+  border:2px solid var(--border-dk);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  cursor:pointer;transition:.15s;
+}
+.log-checkbox.checked{background:var(--amber);border-color:var(--amber);}
+.log-checkbox.checked::after{content:'✓';color:#fff;font-size:14px;font-weight:700;}
+.log-check-wrap{display:flex;align-items:center;}
+
 /* ══ LOG LIST CARDS ══ */
 .log-card{
-  background:var(--soil-card);border:2px solid var(--border);border-radius:var(--radius);
+  background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);
   padding:20px;margin-bottom:12px;cursor:pointer;transition:border-color .15s;
 }
 .log-card:hover,.log-card:active{border-color:var(--amber);}
@@ -329,7 +341,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .status-complete{background:var(--green-bg);color:var(--green);border:1px solid var(--green);}
 .status-signed{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber);}
 .add-log-card{
-  border:3px dashed var(--border-dk);border-radius:var(--radius);
+  border:2px solid var(--border-dk);border-radius:var(--radius);
   padding:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:12px;color:var(--ink-2);cursor:pointer;transition:.15s;background:var(--surface);
   font-family:'IBM Plex Sans',sans-serif;font-size:var(--text-base);font-weight:600;
@@ -736,7 +748,20 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--amber);letter-spacing:1px;">Application Records</div>
           <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);" id="logSubtitle">Loading...</div>
         </div>
-        <button class="btn btn-primary" onclick="switchTab('newlog')">+ New Record</button>
+        <div class="flex-gap">
+          <button class="btn btn-outline btn-sm" id="selectModeBtn" onclick="toggleSelectMode()">☑ Select</button>
+          <button class="btn btn-sky btn-sm" onclick="exportToGoogleDrive()">⬆ Drive</button>
+          <button class="btn btn-primary" onclick="switchTab('newlog')">+ New Record</button>
+        </div>
+      </div>
+      <!-- SELECT TOOLBAR -->
+      <div id="selectionToolbar" class="hidden" style="background:var(--amber-bg);border:2px solid var(--amber);border-radius:var(--radius);padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--amber);" id="selectionCount">0 selected</span>
+        <div style="flex:1;"></div>
+        <button class="btn btn-sky btn-sm" onclick="uploadSelectedToDrive()">⬆ Upload to Google Drive</button>
+        <button class="btn btn-ghost btn-sm" onclick="selectAllLogs()">Select All</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Clear</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleSelectMode()">Cancel</button>
       </div>
       <div id="logsList"></div>
     </div>
@@ -1069,7 +1094,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- VIEW LOG MODAL -->
 <div class="modal-overlay hidden" id="viewLogModal">
-  <div class="modal modal-dark" style="max-width:720px;">
+  <div class="modal" style="max-width:720px;">
     <h2>Application Record</h2>
     <div id="viewLogContent"></div>
     <div class="modal-actions">
@@ -1489,7 +1514,10 @@ function renderLogsList() {
         ${prods ? 'Products: '+prods : 'No products added yet'}
       </div>
     `;
-    div.onclick = () => viewLog(log.id);
+    div.onclick = (e) => {
+      if (selectModeActive) { toggleLogSelection(log.id, e); return; }
+      viewLog(log.id);
+    };
     el.appendChild(div);
   });
 }
@@ -2127,9 +2155,9 @@ function renderSummaryTab() {
       const same = row.diff === 0;
       const color = same ? 'var(--muted)' : up ? 'var(--green-lt)' : 'var(--red-lt)';
       const arrow = same ? '→' : up ? '▲' : '▼';
-      return '<div style="background:#080503;border:1px solid var(--border);border-radius:4px;padding:12px;">' +
-        '<div style="font-family:monospace;font-size:8px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;">' + row.label + '</div>' +
-        '<div style="font-family:"",sans-serif;font-size:22px;color:var(--paper);">' + row.curr + '</div>' +
+      return '<div style="background:var(--surface);border:2px solid var(--border-dk);border-radius:6px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">' +
+        '<div style="font-family:monospace;font-size:9px;letter-spacing:2px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:6px;">' + row.label + '</div>' +
+        '<div style="font-family:"",sans-serif;font-size:22px;color:var(--ink);">' + row.curr + '</div>' +
         '<div style="font-family:monospace;font-size:11px;color:' + color + ';margin-top:4px;">' + arrow + ' ' + (row.diff > 0 ? '+' : '') + row.diff + ' vs prev year (' + row.pct + '%)</div>' +
         '</div>';
     }).join('');
@@ -2257,6 +2285,219 @@ function downloadPDF() {
 }
 
 // ══════════════════════════════════════════════════════
+// GOOGLE DRIVE EXPORT
+// ══════════════════════════════════════════════════════
+let selectModeActive = false;
+let selectedLogIds = new Set();
+
+function toggleSelectMode() {
+  selectModeActive = !selectModeActive;
+  selectedLogIds.clear();
+  const btn = document.getElementById('selectModeBtn');
+  const toolbar = document.getElementById('selectionToolbar');
+  if (selectModeActive) {
+    btn.textContent = '✕ Cancel Select';
+    btn.className = 'btn btn-danger btn-sm';
+    toolbar.classList.remove('hidden');
+  } else {
+    btn.textContent = '☑ Select Records';
+    btn.className = 'btn btn-outline btn-sm';
+    toolbar.classList.add('hidden');
+  }
+  renderLogsList();
+}
+
+function selectAllLogs() {
+  allLogs.forEach(l => selectedLogIds.add(l.id));
+  updateSelectionCount();
+  renderLogsList();
+}
+
+function clearSelection() {
+  selectedLogIds.clear();
+  updateSelectionCount();
+  renderLogsList();
+}
+
+function updateSelectionCount() {
+  const el = document.getElementById('selectionCount');
+  if (el) el.textContent = selectedLogIds.size + ' selected';
+}
+
+function toggleLogSelection(logId, e) {
+  e.stopPropagation();
+  if (selectedLogIds.has(logId)) selectedLogIds.delete(logId);
+  else selectedLogIds.add(logId);
+  updateSelectionCount();
+  // Update visual state
+  const cards = document.querySelectorAll('.log-card');
+  cards.forEach(c => {
+    if (c.dataset.logId === logId) {
+      c.classList.toggle('log-selected', selectedLogIds.has(logId));
+    }
+  });
+}
+
+function buildLogCSV(log) {
+  const prods = (log.products || []).map(p => p.name + ' (EPA:' + (p.epa_number||'N/A') + ') @ ' + p.rate + ' ' + p.unit).join('; ');
+  const rows = [
+    ['PESTICIDE APPLICATION RECORD'],
+    ['Applicator', log.applicator_name || ''],
+    ['Cert #', log.applicator_cert_number || ''],
+    ['Date', log.application_date || ''],
+    ['Start Time', log.application_time || ''],
+    ['Stop Time', log.stop_time || ''],
+    ['Commodity', log.commodity_applied_to || ''],
+    ['Pest Controlled', log.pest_controlled || ''],
+    ['Acres', log.acres || ''],
+    ['Legal Description', log.legal_description || ''],
+    ['Equipment', log.equipment_used || ''],
+    ['Pesticide Supplier', log.pesticide_supplier || ''],
+    ['Products Applied', prods],
+    ['Water/Acre (gal)', log.water_per_acre || ''],
+    ['Wind Speed (mph)', log.wind_speed || ''],
+    ['Wind Direction', log.wind_direction || ''],
+    ['Temperature (°F)', log.temperature || ''],
+    ['Notification Name', log.notification_name || ''],
+    ['Status', log.status || '']
+  ];
+  return rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+}
+
+async function exportToGoogleDrive() {
+  // If no records selected, show instructions
+  toast('Select records using "Select Records" then click "Upload Selected to Drive"', 'info');
+  if (!selectModeActive) toggleSelectMode();
+}
+
+async function uploadSelectedToDrive() {
+  if (selectedLogIds.size === 0) { toast('Select at least one record first.', 'warn'); return; }
+  const toUpload = allLogs.filter(l => selectedLogIds.has(l.id));
+
+  // Check if Google Drive is connected via OAuth
+  // We use the Google Drive Picker + Files API with a user-granted OAuth token
+  try {
+    await initGoogleDriveAPI();
+    toast('Uploading ' + toUpload.length + ' record(s) to Google Drive...', 'info');
+
+    let uploaded = 0;
+    for (const log of toUpload) {
+      const csv = buildLogCSV(log);
+      const filename = 'SprayLog_' + (log.commodity_applied_to || 'Record').replace(/\s+/g,'_') + '_' + (log.application_date || 'unknown') + '.csv';
+      await uploadFileToDrive(filename, csv);
+      uploaded++;
+    }
+    toast('✓ ' + uploaded + ' record(s) saved to Google Drive!');
+    toggleSelectMode();
+  } catch(e) {
+    if (e.message === 'NOT_SIGNED_IN') {
+      openGDriveAuthModal();
+    } else {
+      toast('Drive upload failed: ' + e.message, 'warn');
+      console.error(e);
+    }
+  }
+}
+
+// Google Drive OAuth + Files API
+let gdriveToken = null;
+const GDRIVE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Set in profile/settings
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+
+async function initGoogleDriveAPI() {
+  // Check if we have a stored token
+  const stored = localStorage.getItem('gdrive_token');
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    if (parsed.expires > Date.now()) {
+      gdriveToken = parsed.token;
+      return;
+    }
+  }
+  throw new Error('NOT_SIGNED_IN');
+}
+
+function openGDriveAuthModal() {
+  document.getElementById('gdriveAuthModal').classList.remove('hidden');
+}
+
+function closeGDriveAuthModal() {
+  document.getElementById('gdriveAuthModal').classList.add('hidden');
+}
+
+function connectGoogleDrive() {
+  if (GDRIVE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
+    toast('Google Drive connection requires setup. See profile settings.', 'warn');
+    closeGDriveAuthModal();
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: GDRIVE_CLIENT_ID,
+    redirect_uri: window.location.origin + '/oauth-callback',
+    response_type: 'token',
+    scope: GDRIVE_SCOPE,
+    prompt: 'consent'
+  });
+  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+  const popup = window.open(authUrl, 'gdrive_auth', 'width=500,height=600');
+
+  // Listen for OAuth callback
+  window.addEventListener('message', function handler(e) {
+    if (e.data && e.data.type === 'gdrive_token') {
+      gdriveToken = e.data.token;
+      localStorage.setItem('gdrive_token', JSON.stringify({
+        token: e.data.token,
+        expires: Date.now() + (e.data.expires_in * 1000) - 60000
+      }));
+      window.removeEventListener('message', handler);
+      closeGDriveAuthModal();
+      toast('✓ Google Drive connected!');
+      // Retry upload
+      uploadSelectedToDrive();
+    }
+  });
+}
+
+async function uploadFileToDrive(filename, content) {
+  if (!gdriveToken) throw new Error('NOT_SIGNED_IN');
+
+  // Create SprayLog Pro folder if needed
+  let folderId = localStorage.getItem('gdrive_folder_id');
+  if (!folderId) {
+    const folderRes = await fetch('https://www.googleapis.com/drive/v3/files?fields=files(id,name)', {
+      headers: { Authorization: 'Bearer ' + gdriveToken }
+    });
+    // Simplified: upload to root Drive folder
+    folderId = 'root';
+  }
+
+  const metadata = { name: filename, mimeType: 'text/csv', parents: [folderId] };
+  const boundary = '-------SprayLogBoundary';
+  const body = '--' + boundary + '\r\n' +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) + '\r\n' +
+    '--' + boundary + '\r\n' +
+    'Content-Type: text/csv\r\n\r\n' +
+    content + '\r\n' +
+    '--' + boundary + '--';
+
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + gdriveToken,
+      'Content-Type': 'multipart/related; boundary=' + boundary
+    },
+    body
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || 'Upload failed');
+  }
+  return res.json();
+}
+
+// ══════════════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════════════
 function formatDate(str) {
@@ -2281,7 +2522,7 @@ function formatDate(str) {
 </script>
 <!-- SHARE MODAL -->
 <div class="modal-overlay hidden" id="shareModal">
-  <div class="modal modal-dark" style="max-width:440px;">
+  <div class="modal" style="max-width:440px;">
     <h2>Share Record</h2>
     <p style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:20px;" id="shareLogTitle">—</p>
     <div style="display:flex;flex-direction:column;gap:10px;">
@@ -2292,6 +2533,36 @@ function formatDate(str) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeShareModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOOGLE DRIVE AUTH MODAL -->
+<div class="modal-overlay hidden" id="gdriveAuthModal">
+  <div class="modal" style="max-width:460px;">
+    <h2>Connect Google Drive</h2>
+    <p style="font-size:var(--text-sm);color:var(--ink-2);line-height:1.7;margin-bottom:20px;">
+      Connect your Google Drive to upload spray records as CSV files directly to your Drive folder. Records are saved as <strong>SprayLog_[Crop]_[Date].csv</strong> files.
+    </p>
+    <div style="background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--amber);margin-bottom:8px;letter-spacing:1px;">WHAT GETS UPLOADED</div>
+      <div style="font-size:var(--text-sm);color:var(--ink-2);line-height:1.8;">
+        ✓ Applicator name &amp; cert number<br>
+        ✓ Products applied with EPA numbers &amp; rates<br>
+        ✓ Application date, time, acres, legal description<br>
+        ✓ Weather conditions at time of application<br>
+        ✓ Pest controlled &amp; commodity
+      </div>
+    </div>
+    <div style="background:var(--sky-bg);border:1px solid #B8D8E8;border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--sky);">
+      ⓘ SprayLog Pro will only be able to create and read files it uploads. It cannot access other files in your Drive.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeGDriveAuthModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="connectGoogleDrive()" style="background:#4285F4;color:#fff;">
+        <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Sign in with Google
+      </button>
     </div>
   </div>
 </div>
