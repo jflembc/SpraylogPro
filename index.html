@@ -2069,7 +2069,13 @@ function clearMapCanvas() { mapPad?.clear(); }
 function printLog() {
   const pd = document.getElementById('printDate');
   if (pd) pd.textContent = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  // Set document title so browser uses it as the PDF filename
+  const log = editingLogId ? allLogs.find(l => l.id === editingLogId) : null;
+  const origTitle = document.title;
+  if (log) document.title = buildFileName(log, 'pdf').replace('.pdf','');
   window.print();
+  // Restore title after print dialog closes
+  setTimeout(() => { document.title = origTitle; }, 2000);
 }
 
 // ══════════════════════════════════════════════════════
@@ -2350,6 +2356,16 @@ function toggleLogSelection(logId, e) {
   }
 }
 
+function buildFileName(log, ext) {
+  const clean = s => (s || '').toString().trim().replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  const field    = clean(log.field_name || log.commodity_applied_to || 'Record');
+  const legal    = clean(log.legal_description);
+  const date     = clean(log.application_date || 'NoDate');
+  const commodity = clean(log.commodity_applied_to);
+  const parts = [field, legal, date, commodity].filter(Boolean);
+  return parts.join('_') + '.' + (ext || 'csv');
+}
+
 function buildLogCSV(log) {
   const prods = (log.products || []).map(p => p.name + ' (EPA:' + (p.epa_number||'N/A') + ') @ ' + p.rate + ' ' + p.unit).join('; ');
   const rows = [
@@ -2395,7 +2411,7 @@ async function uploadSelectedToDrive() {
     let uploaded = 0;
     for (const log of toUpload) {
       const csv = buildLogCSV(log);
-      const filename = 'SprayLog_' + (log.commodity_applied_to || 'Record').replace(/\s+/g,'_') + '_' + (log.application_date || 'unknown') + '.csv';
+      const filename = buildFileName(log, 'csv');
       await uploadFileToDrive(filename, csv);
       uploaded++;
     }
@@ -2577,7 +2593,7 @@ function formatDate(str) {
   <div class="modal" style="max-width:460px;">
     <h2>Connect Google Drive</h2>
     <p style="font-size:var(--text-sm);color:var(--ink-2);line-height:1.7;margin-bottom:20px;">
-      Connect your Google Drive to upload spray records as CSV files directly to your Drive folder. Records are saved as <strong>SprayLog_[Crop]_[Date].csv</strong> files.
+      Connect your Google Drive to upload spray records as CSV files directly to your Drive folder. Records are saved as <strong>FieldName_LegalDescription_Date_Commodity.csv</strong>
     </p>
     <div style="background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;">
       <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--amber);margin-bottom:8px;letter-spacing:1px;">WHAT GETS UPLOADED</div>
