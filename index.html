@@ -312,6 +312,62 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 }
 .remove-row-btn:hover{background:var(--red);color:#fff;border-color:var(--red);}
 
+/* ══ SEARCHABLE COMBO BOX ══ */
+.combo-wrap{position:relative;width:100%;}
+.combo-input-wrap{position:relative;display:flex;align-items:center;}
+.combo-input{
+  width:100%;
+  background:var(--surface-2);
+  border:2px solid var(--border);
+  border-radius:var(--radius);
+  padding:12px 38px 12px 14px;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:var(--text-base);
+  color:var(--ink);
+  outline:none;
+  cursor:pointer;
+  transition:border-color .15s, box-shadow .15s;
+}
+.combo-input:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(181,112,15,.2);}
+.combo-input::placeholder{color:var(--muted);}
+.combo-arrow{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  pointer-events:none;color:var(--muted);font-size:12px;
+}
+.combo-dropdown{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:500;
+  background:var(--surface);
+  border:2px solid var(--amber);
+  border-radius:var(--radius);
+  box-shadow:0 8px 24px rgba(0,0,0,.15);
+  max-height:260px;overflow-y:auto;
+  display:none;
+}
+.combo-dropdown.open{display:block;}
+.combo-option{
+  padding:11px 14px;
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:var(--text-sm);
+  color:var(--ink);
+  cursor:pointer;
+  border-bottom:1px solid var(--border);
+  line-height:1.4;
+  transition:background .1s;
+}
+.combo-option:last-child{border-bottom:none;}
+.combo-option:hover,.combo-option.focused{background:var(--amber-bg);}
+.combo-option.selected{background:var(--amber-bg);font-weight:700;color:var(--amber);}
+.combo-option .co-sub{font-size:12px;color:var(--muted);margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+.combo-empty{padding:14px;font-size:var(--text-sm);color:var(--muted);text-align:center;font-style:italic;}
+.combo-group-label{
+  padding:8px 14px 4px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--amber);background:var(--surface-2);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;
+}
+
 /* ══ LOG SELECTION ══ */
 .log-selected{border-color:var(--amber) !important;background:var(--amber-bg) !important;}
 .log-checkbox{
@@ -794,9 +850,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <!-- CUSTOMER BAR (custom applicator mode) -->
       <div id="customerBar" class="customer-bar hidden">
         <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--sky);letter-spacing:1px;white-space:nowrap;">CUSTOMER:</span>
-        <select id="log_customerId" style="max-width:280px;background:var(--soil-mid);border:1px solid var(--border);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;" onchange="onCustomerChange()">
-          <option value="">— Select Customer —</option>
-        </select>
+        <div id="customerComboContainer" style="max-width:320px;flex:1;"></div>
         <button class="btn btn-ghost btn-sm" onclick="openCustomerModal()">+ New</button>
       </div>
 
@@ -1421,15 +1475,18 @@ function renderCustomersList() {
 }
 
 function populateCustomerDropdown() {
-  const sel = document.getElementById('log_customerId');
-  if (!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">— Select Customer —</option>';
-  allCustomers.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c.id; o.textContent = c.name;
-    if (c.id === cur) o.selected = true;
-    sel.appendChild(o);
+  const container = document.getElementById('customerComboContainer');
+  if (!container) return;
+  const customerOptions = allCustomers.map(c => ({
+    value: c.id,
+    label: c.name,
+    sub: [c.city, c.state].filter(Boolean).join(', ') || c.phone || ''
+  }));
+  const currentVal = combos['customerComboContainer']?.getValue() || '';
+  createCombo('customerComboContainer', customerOptions, {
+    placeholder: 'Search customers...',
+    value: currentVal,
+    onchange: (value) => { onCustomerChange(value); }
   });
 }
 
@@ -1477,11 +1534,10 @@ async function saveCustomer() {
   await loadCustomers();
 }
 
-function onCustomerChange() {
-  const id = document.getElementById('log_customerId').value;
-  const c = allCustomers.find(x => x.id === id);
+function onCustomerChange(id) {
+  const resolvedId = id || combos['customerComboContainer']?.getValue();
+  const c = allCustomers.find(x => x.id === resolvedId);
   if (!c) return;
-  // Could prefill customer address fields if needed
 }
 
 // ══════════════════════════════════════════════════════
@@ -1654,11 +1710,7 @@ function addProductRow(existing) {
   row.innerHTML =
     '<div>' +
     '<label>Product</label>' +
-    '<select id="chemSel_' + idx + '" data-row="' + idx + '">' +
-    '<option value="">— Select Product —</option>' +
-    '<optgroup label="Common Chemicals">' + chemOpts + '</optgroup>' +
-    '<option value="__custom">+ Type Custom Name</option>' +
-    '</select>' +
+    '<div id="comboContainer_' + idx + '"></div>' +
     '<input type="text" id="customName_' + idx + '" placeholder="Custom product name..." class="hidden" style="margin-top:6px;" value="' + (existing && existing.isCustom ? existing.name : '') + '">' +
     '<div id="epa_' + idx + '" class="epa-display">EPA #: ' + (existing && existing.epa_number ? existing.epa_number : '—') + '</div>' +
     '<div id="labelRate_' + idx + '" style="font-family:monospace;font-size:9px;color:#4A8FA8;margin-top:3px;"></div>' +
@@ -1684,24 +1736,59 @@ function addProductRow(existing) {
     '</div>' +
     '<button class="remove-product-btn" style="background:transparent;border:1px solid #C0A878;border-radius:3px;color:#C04040;font-size:18px;height:38px;width:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:20px;flex-shrink:0;">×</button>';
   document.getElementById('productRows').appendChild(row);
-  // Attach event listener after DOM insert (avoids CSP inline handler issues)
-  const chemSelEl = document.getElementById('chemSel_' + idx);
-  if (chemSelEl) {
-    chemSelEl.addEventListener('change', function() { onProductSelect(idx, this); });
-  }
-  // Wire remove button
-  const removeBtn = row.querySelector('.remove-product-btn');
-  if (removeBtn) {
-    removeBtn.addEventListener('click', function() { row.remove(); });
-  }
-  // If editing existing with a chemical_id, trigger the select to show EPA/PPE
-  if (existing && existing.chemical_id) {
-    const selEl = document.getElementById('chemSel_' + idx);
-    if (selEl) {
-      selEl.value = existing.chemical_id;
-      onProductSelect(idx, selEl);
+
+  // Build combo options from allChemicals
+  const comboOptions = allChemicals.map(c => ({
+    value: c.id,
+    label: c.name,
+    sub: 'EPA: ' + (c.epa_number || 'N/A') + (c.rei_hours ? '  |  REI: ' + c.rei_hours + 'h' : '') + (c.signal_word ? '  |  ' + c.signal_word : ''),
+    group: c.is_custom ? 'My Chemicals' : 'System Chemicals',
+    epa: c.epa_number || '',
+    ppe: c.ppe_requirements || [],
+    signal: c.signal_word || '',
+    rei: c.rei_hours || 0
+  }));
+  comboOptions.push({ value: '__custom', label: '+ Enter custom product name', group: 'Custom' });
+
+  createCombo('comboContainer_' + idx, comboOptions, {
+    placeholder: 'Search chemicals...',
+    value: existing?.chemical_id || '',
+    onchange: (value, option) => {
+      if (value === '__custom') {
+        document.getElementById('customName_' + idx).classList.remove('hidden');
+        document.getElementById('epa_' + idx).textContent = 'EPA #: —';
+        document.getElementById('ppe_' + idx).innerHTML = '';
+        document.getElementById('signal_' + idx).textContent = '';
+        return;
+      }
+      document.getElementById('customName_' + idx).classList.add('hidden');
+      if (option) {
+        document.getElementById('epa_' + idx).textContent = 'EPA #: ' + (option.epa || '—');
+        document.getElementById('ppe_' + idx).innerHTML = renderPPETags(option.ppe || []);
+        const sigEl = document.getElementById('signal_' + idx);
+        sigEl.textContent = option.signal || '';
+        sigEl.className = 'signal-' + (option.signal || '');
+      }
+    }
+  });
+
+  // If editing existing, set the value
+  if (existing?.chemical_id && combos['comboContainer_' + idx]) {
+    combos['comboContainer_' + idx].setValue(existing.chemical_id);
+    // Trigger display of EPA/PPE
+    const opt = allChemicals.find(c => c.id === existing.chemical_id);
+    if (opt) {
+      document.getElementById('epa_' + idx).textContent = 'EPA #: ' + (opt.epa_number || '—');
+      document.getElementById('ppe_' + idx).innerHTML = renderPPETags(opt.ppe_requirements || []);
+      const sigEl = document.getElementById('signal_' + idx);
+      sigEl.textContent = opt.signal_word || '';
+      sigEl.className = 'signal-' + (opt.signal_word || '');
     }
   }
+
+  // Wire remove button
+  const removeBtn = row.querySelector('.remove-product-btn');
+  if (removeBtn) removeBtn.addEventListener('click', function() { row.remove(); });
 }
 
 function onProductSelect(idx, sel) {
@@ -1759,33 +1846,42 @@ function getProductsFromForm() {
   const products = [];
   rows.forEach(row => {
     const idx = row.dataset.idx;
-    const sel = row.querySelector('select');
-    if (!sel) return;
-    const opt = sel.selectedOptions[0];
-    const isCustom = sel.value === '__custom';
-    const name = isCustom
-      ? (document.getElementById(`customName_${idx}`)?.value || '')
-      : (opt?.textContent || '');
+    const comboKey = 'comboContainer_' + idx;
+    const combo = combos[comboKey];
+    if (!combo) return;
+    const value = combo.getValue();
+    const isCustom = value === '__custom';
+    const customInput = document.getElementById('customName_' + idx);
+    let name = '';
+    let chemData = {};
+    if (isCustom) {
+      name = (customInput?.value || '').trim();
+    } else if (value) {
+      const chem = allChemicals.find(c => c.id === value);
+      name = chem ? chem.name : '';
+      chemData = chem || {};
+    }
     if (!name) return;
     products.push({
-      chemical_id: isCustom ? null : sel.value,
+      chemical_id: isCustom ? null : value,
       name,
-      epa_number: isCustom ? '' : (opt?.dataset.epa || ''),
-      ppe: isCustom ? [] : (() => { try { return JSON.parse((opt?.dataset.ppe || '[]').replace(/&quot;/g, '"')); } catch(e) { return []; } })(),
-      signal_word: isCustom ? '' : (opt?.dataset.signal || ''),
-      rate: document.getElementById(`rate_${idx}`)?.value || '',
-      unit: document.getElementById(`unit_${idx}`)?.value || ''
+      epa_number: chemData.epa_number || '',
+      ppe: chemData.ppe_requirements || [],
+      signal_word: chemData.signal_word || '',
+      rate: document.getElementById('rate_' + idx)?.value || '',
+      unit: document.getElementById('unit_' + idx)?.value || ''
     });
   });
   return products;
 }
+
 
 function buildLogPayload(status) {
   const products = getProductsFromForm();
   const sig = getActiveSig();
   return {
     owner_id: currentUser.id,
-    customer_id: document.getElementById('log_customerId')?.value || null,
+    customer_id: combos['customerComboContainer']?.getValue() || null,
     is_own_farm: (userProfile?.mode !== 'custom_applicator'),
     applicator_name: document.getElementById('log_appName').value,
     applicator_address: document.getElementById('log_appAddr').value,
@@ -2309,6 +2405,152 @@ function downloadPDF() {
   openEditLog(shareLogId);
   setTimeout(() => printLog(), 600);
   toast('Opening print dialog for PDF ✓');
+}
+
+// ══════════════════════════════════════════════════════
+// SEARCHABLE COMBO BOX ENGINE
+// ══════════════════════════════════════════════════════
+const combos = {}; // registry: id -> { value, label, onchange }
+
+function createCombo(containerId, options, config) {
+  // options: [{value, label, sub, group}]
+  // config: {placeholder, onchange, value}
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const id = containerId;
+  const state = { value: config.value || '', label: '', open: false, focusedIdx: -1, filter: '' };
+
+  // Find initial label
+  if (state.value) {
+    const found = options.find(o => o.value === state.value);
+    if (found) state.label = found.label;
+  }
+
+  container.innerHTML =
+    '<div class="combo-wrap" id="cw_' + id + '">' +
+      '<div class="combo-input-wrap">' +
+        '<input type="text" class="combo-input" id="ci_' + id + '" ' +
+          'placeholder="' + (config.placeholder || 'Search or select...') + '" ' +
+          'autocomplete="off" autocorrect="off" spellcheck="false" ' +
+          'value="' + escHtml(state.label) + '">' +
+        '<span class="combo-arrow">▾</span>' +
+      '</div>' +
+      '<div class="combo-dropdown" id="cd_' + id + '"></div>' +
+    '</div>';
+
+  const input = document.getElementById('ci_' + id);
+  const dropdown = document.getElementById('cd_' + id);
+
+  function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function renderOptions(filter) {
+    const q = (filter || '').toLowerCase().trim();
+    const filtered = q
+      ? options.filter(o =>
+          o.label.toLowerCase().includes(q) ||
+          (o.sub || '').toLowerCase().includes(q) ||
+          (o.group || '').toLowerCase().includes(q))
+      : options;
+
+    if (!filtered.length) {
+      dropdown.innerHTML = '<div class="combo-empty">No matches found</div>';
+      return;
+    }
+
+    let html = '';
+    let lastGroup = null;
+    filtered.forEach((o, i) => {
+      if (o.group && o.group !== lastGroup) {
+        html += '<div class="combo-group-label">' + escHtml(o.group) + '</div>';
+        lastGroup = o.group;
+      }
+      const isSel = o.value === state.value;
+      html += '<div class="combo-option' + (isSel ? ' selected' : '') + '" data-val="' + escHtml(o.value) + '" data-idx="' + i + '">' +
+        escHtml(o.label) +
+        (o.sub ? '<div class="co-sub">' + escHtml(o.sub) + '</div>' : '') +
+      '</div>';
+    });
+    dropdown.innerHTML = html;
+
+    // Attach click handlers
+    dropdown.querySelectorAll('.combo-option').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        selectOption(el.dataset.val, el.querySelector('.combo-option') ? el.textContent.trim() : el.firstChild.textContent.trim());
+      });
+    });
+  }
+
+  function selectOption(value, labelText) {
+    // Get label from options list
+    const found = options.find(o => o.value === value);
+    const displayLabel = found ? found.label : labelText;
+    state.value = value;
+    state.label = displayLabel;
+    input.value = displayLabel;
+    closeDropdown();
+    if (config.onchange) config.onchange(value, found);
+    combos[id].value = value;
+  }
+
+  function openDropdown() {
+    state.open = true;
+    state.filter = '';
+    input.value = '';
+    input.placeholder = state.label || (config.placeholder || 'Search...');
+    renderOptions('');
+    dropdown.classList.add('open');
+    // Close all other combos
+    Object.keys(combos).forEach(k => { if (k !== id && combos[k].close) combos[k].close(); });
+  }
+
+  function closeDropdown() {
+    state.open = false;
+    dropdown.classList.remove('open');
+    // Restore display label
+    input.value = state.label;
+    input.placeholder = config.placeholder || 'Search or select...';
+  }
+
+  // Events
+  input.addEventListener('focus', () => { openDropdown(); });
+  input.addEventListener('input', () => {
+    state.filter = input.value;
+    renderOptions(input.value);
+    if (!dropdown.classList.contains('open')) dropdown.classList.add('open');
+  });
+  input.addEventListener('keydown', e => {
+    const opts = dropdown.querySelectorAll('.combo-option');
+    if (e.key === 'Escape') { closeDropdown(); input.blur(); }
+    else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      state.focusedIdx = Math.min(state.focusedIdx + 1, opts.length - 1);
+      opts.forEach((o,i) => o.classList.toggle('focused', i === state.focusedIdx));
+      if (opts[state.focusedIdx]) opts[state.focusedIdx].scrollIntoView({block:'nearest'});
+    }
+    else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      state.focusedIdx = Math.max(state.focusedIdx - 1, 0);
+      opts.forEach((o,i) => o.classList.toggle('focused', i === state.focusedIdx));
+    }
+    else if (e.key === 'Enter' && state.focusedIdx >= 0) {
+      e.preventDefault();
+      const focused = opts[state.focusedIdx];
+      if (focused) selectOption(focused.dataset.val, focused.textContent.trim());
+    }
+  });
+  document.addEventListener('mousedown', e => {
+    if (state.open && !document.getElementById('cw_' + id)?.contains(e.target)) closeDropdown();
+  });
+
+  // Register
+  combos[id] = { getValue: () => state.value, setValue: (v) => {
+    const found = options.find(o => o.value === v);
+    state.value = v;
+    state.label = found ? found.label : v;
+    input.value = state.label;
+  }, close: closeDropdown, value: state.value };
 }
 
 // ══════════════════════════════════════════════════════
