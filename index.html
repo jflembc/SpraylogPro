@@ -917,7 +917,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="card">
         <div class="sec-label">Application Details</div>
         <div class="form-row c2">
-          <div class="form-group" style="margin:0"><label>Field Name</label><input type="text" id="log_fieldName" placeholder="e.g. North Quarter, Home Place"></div>
+          <div class="form-group" style="margin:0">
+            <label>Field <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);font-weight:400;text-transform:none;">— from Know Your Ground</span></label>
+            <select id="log_fieldSelect" onchange="onFieldSelect(this.value)" style="width:100%;">
+              <option value="">— Select Field —</option>
+            </select>
+            <input type="hidden" id="log_fieldName" value="">
+            <input type="hidden" id="log_fieldId" value="">
+          </div>
           <div class="form-group" style="margin:0"><label>Commodity Applied To</label><input type="text" id="log_commodity" placeholder="e.g. Corn, Soybeans"></div>
         </div>
         <div class="form-row c3">
@@ -1202,9 +1209,121 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 // ══════════════════════════════════════════════════════
 // SUPABASE INIT
 // ══════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://iqevslgnnkivtjncklvq.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxZXZzbGdubmtpdnRqbmNrbHZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjMyMDAsImV4cCI6MjA4OTg5OTIwMH0.LrfDRFyCQRO4cYZXlz4XfK3Rx-yUPb-xBcnY3-YnwoQ';
+const SUPABASE_URL = 'https://tyttsvngdeitkjttdarp.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dHRzdm5nZGVpdGtqdHRkYXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM0MTMsImV4cCI6MjA5MTg2OTQxM30.whG0Kp-ybQEo4vqhlSCUmjJJT5DKOBLqcNms4ngsYF8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── KYG FIELDS INTEGRATION ──
+let kygFields = []; // cached fields from Know Your Ground
+
+async function loadKYGFields() {
+  if (!currentUser) return;
+  const { data, error } = await sb
+    .from('fields')
+    .select('id, name, acres, legals, crop, season, farm_id')
+    .eq('user_id', currentUser.id)
+    .order('name');
+  if (error) { console.warn('Could not load KYG fields:', error.message); return; }
+  kygFields = data || [];
+  populateFieldDropdown();
+}
+
+function populateFieldDropdown() {
+  const sel = document.getElementById('log_fieldSelect');
+  if (!sel) return;
+  // Save current value
+  const current = document.getElementById('log_fieldId')?.value;
+  // Rebuild options
+  sel.innerHTML = '<option value="">— Select Field —</option>';
+  if (kygFields.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '__manual__';
+    opt.textContent = '(No fields in Know Your Ground yet — enter manually)';
+    sel.appendChild(opt);
+  } else {
+    // Group by season if multiple seasons exist
+    const seasons = [...new Set(kygFields.map(f => f.season).filter(Boolean))].sort().reverse();
+    if (seasons.length > 1) {
+      seasons.forEach(season => {
+        const group = document.createElement('optgroup');
+        group.label = season + ' Season';
+        kygFields.filter(f => f.season === season).forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f.id;
+          opt.dataset.name = f.name;
+          opt.dataset.acres = f.acres || '';
+          opt.dataset.legals = f.legals || '';
+          opt.dataset.crop = f.crop || '';
+          opt.textContent = f.name + (f.acres ? ' — ' + f.acres + ' ac' : '') + (f.crop ? ' · ' + f.crop : '');
+          group.appendChild(opt);
+        });
+        sel.appendChild(group);
+      });
+    } else {
+      kygFields.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id;
+        opt.dataset.name = f.name;
+        opt.dataset.acres = f.acres || '';
+        opt.dataset.legals = f.legals || '';
+        opt.dataset.crop = f.crop || '';
+        opt.textContent = f.name + (f.acres ? ' — ' + f.acres + ' ac' : '') + (f.crop ? ' · ' + f.crop : '');
+        sel.appendChild(opt);
+      });
+    }
+    // Re-add manual entry option at bottom
+    const manualGroup = document.createElement('optgroup');
+    manualGroup.label = '─────────────';
+    const manualOpt = document.createElement('option');
+    manualOpt.value = '__manual__';
+    manualOpt.textContent = '+ Enter field manually';
+    manualGroup.appendChild(manualOpt);
+    sel.appendChild(manualGroup);
+  }
+  // Restore selection
+  if (current) sel.value = current;
+}
+
+function onFieldSelect(val) {
+  const nameHidden = document.getElementById('log_fieldName');
+  const idHidden = document.getElementById('log_fieldId');
+  if (val === '__manual__' || !val) {
+    // Show a text input inline for manual entry
+    showManualFieldInput();
+    if (idHidden) idHidden.value = '';
+    return;
+  }
+  hideManualFieldInput();
+  const field = kygFields.find(f => f.id === val);
+  if (!field) return;
+  // Set hidden values
+  if (nameHidden) nameHidden.value = field.name;
+  if (idHidden) idHidden.value = field.id;
+  // Auto-fill related fields
+  const acresEl = document.getElementById('log_acres');
+  const legalsEl = document.getElementById('log_legals');
+  const commodityEl = document.getElementById('log_commodity');
+  if (acresEl && field.acres) acresEl.value = field.acres;
+  if (legalsEl && field.legals) legalsEl.value = field.legals;
+  if (commodityEl && field.crop && !commodityEl.value) commodityEl.value = field.crop;
+}
+
+function showManualFieldInput() {
+  let manual = document.getElementById('log_fieldNameManual');
+  if (!manual) {
+    const wrap = document.createElement('div');
+    wrap.id = 'manualFieldWrap';
+    wrap.style.marginTop = '8px';
+    wrap.innerHTML = '<input type="text" id="log_fieldNameManual" placeholder="Enter field name manually" style="width:100%;" oninput="document.getElementById(\'log_fieldName\').value=this.value">';
+    document.getElementById('log_fieldSelect').parentNode.appendChild(wrap);
+  }
+  document.getElementById('manualFieldWrap').style.display = 'block';
+}
+
+function hideManualFieldInput() {
+  const wrap = document.getElementById('manualFieldWrap');
+  if (wrap) wrap.style.display = 'none';
+}
 
 const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 
@@ -1300,13 +1419,12 @@ async function bootApp(user) {
     await loadProfile();
     await loadChemicals();
     await loadCustomers();
+    await loadKYGFields(); // Load fields from Know Your Ground
     await loadLogs();
-    // Defer sig pad init — canvas must be visible first
     checkCertExpiry();
     switchTab('logs');
   } catch(e) {
     console.error('Boot error:', e);
-    // Don't lock the user out — still show the app
     switchTab('logs');
   }
 }
@@ -1671,8 +1789,22 @@ function openEditLog(id) {
   editingLogId = id;
   switchTab('newlog');
   document.getElementById('logFormTitle').textContent = 'Edit Record';
-  // Fill form fields
-  document.getElementById('log_fieldName').value = log.field_name || '';
+  // Restore field selection — use field_id if available, else match by name
+  const fieldSel = document.getElementById('log_fieldSelect');
+  const fieldIdHidden = document.getElementById('log_fieldId');
+  if (log.field_id && fieldSel) {
+    fieldSel.value = log.field_id;
+    if (fieldIdHidden) fieldIdHidden.value = log.field_id;
+    document.getElementById('log_fieldName').value = log.field_name || '';
+    hideManualFieldInput();
+  } else if (log.field_name) {
+    // Legacy record with no field_id — show manual input
+    if (fieldSel) fieldSel.value = '__manual__';
+    document.getElementById('log_fieldName').value = log.field_name || '';
+    showManualFieldInput();
+    const manualEl = document.getElementById('log_fieldNameManual');
+    if (manualEl) manualEl.value = log.field_name || '';
+  }
   document.getElementById('log_commodity').value = log.commodity_applied_to || '';
   document.getElementById('log_pest').value = log.pest_controlled || '';
   document.getElementById('log_water').value = log.water_per_acre || '';
@@ -1681,7 +1813,6 @@ function openEditLog(id) {
   document.getElementById('log_stopTime').value = log.stop_time || '';
   document.getElementById('log_acres').value = log.acres || '';
   document.getElementById('log_supplier').value = log.pesticide_supplier || '';
-  document.getElementById('log_fieldName').value = log.field_name || '';
   document.getElementById('log_legals').value = log.legal_description || '';
   document.getElementById('log_notification').value = log.notification_name || '';
   document.getElementById('log_windSpeed').value = log.wind_speed || '';
@@ -1716,8 +1847,16 @@ function initNewLogForm() {
   const now = new Date();
   document.getElementById('log_appDate').value = now.toISOString().split('T')[0];
   document.getElementById('log_startTime').value = now.toTimeString().slice(0,5);
+  // Clear field selection
+  const fieldSel = document.getElementById('log_fieldSelect');
+  const fieldIdHidden = document.getElementById('log_fieldId');
+  const fieldNameHidden = document.getElementById('log_fieldName');
+  if (fieldSel) fieldSel.value = '';
+  if (fieldIdHidden) fieldIdHidden.value = '';
+  if (fieldNameHidden) fieldNameHidden.value = '';
+  hideManualFieldInput();
   // Clear other fields
-  ['log_fieldName','log_commodity','log_pest','log_water','log_stopTime','log_acres','log_supplier','log_legals','log_notification','log_windSpeed','log_temp','log_fieldNotes'].forEach(id => {
+  ['log_commodity','log_pest','log_water','log_stopTime','log_acres','log_supplier','log_legals','log_notification','log_windSpeed','log_temp','log_fieldNotes'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
   document.getElementById('log_windDir').value = '';
@@ -1915,6 +2054,7 @@ function buildLogPayload(status) {
   return {
     owner_id: currentUser.id,
     customer_id: combos['customerComboContainer']?.getValue() || null,
+    field_id: document.getElementById('log_fieldId')?.value || null,
     is_own_farm: (userProfile?.mode !== 'custom_applicator'),
     applicator_name: document.getElementById('log_appName').value,
     applicator_address: document.getElementById('log_appAddr').value,
