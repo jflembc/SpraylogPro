@@ -719,6 +719,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="auth-tabs">
         <button class="auth-tab active" onclick="setAuthTab('login')">Sign In</button>
         <button class="auth-tab" onclick="setAuthTab('signup')">Create Account</button>
+        <button class="auth-tab" onclick="setAuthTab('reset')" id="resetTab">Reset Password</button>
       </div>
       <div id="authMsg"></div>
 
@@ -726,7 +727,28 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div id="loginForm">
         <div class="form-group"><label>Email</label><input type="email" id="li_email" placeholder="you@farm.com"></div>
         <div class="form-group"><label>Password</label><input type="password" id="li_pass" placeholder="••••••••"></div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Sign In</button>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()" id="loginBtn">Sign In</button>
+        <div style="text-align:center;margin-top:12px;">
+          <button onclick="setAuthTab('reset')" style="background:none;border:none;font-family:inherit;font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Forgot your password?</button>
+        </div>
+      </div>
+
+      <!-- RESET PASSWORD -->
+      <div id="resetForm" class="hidden">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Enter your email and we'll send a reset link. Check spam if it doesn't arrive within 2 minutes.</p>
+        <div class="form-group"><label>Email</label><input type="email" id="re_email" placeholder="you@farm.com"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doReset()" id="resetBtn">Send Reset Link</button>
+        <div style="text-align:center;margin-top:12px;">
+          <button onclick="setAuthTab('login')" style="background:none;border:none;font-family:inherit;font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">← Back to Sign In</button>
+        </div>
+      </div>
+
+      <!-- SET NEW PASSWORD — shown after clicking reset email link -->
+      <div id="newPassForm" class="hidden">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Enter and confirm your new password.</p>
+        <div class="form-group"><label>New Password</label><input type="password" id="np_pass" placeholder="Min 8 characters"></div>
+        <div class="form-group"><label>Confirm Password</label><input type="password" id="np_pass2" placeholder="Re-enter password"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doSetNewPassword()" id="newPassBtn">Set New Password</button>
       </div>
 
       <!-- SIGNUP -->
@@ -766,6 +788,43 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
+<!-- ACCOUNT SETTINGS MODAL -->
+<div class="modal-overlay hidden" id="slAccountSettingsModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px;">
+  <div style="background:var(--paper);border-radius:4px;border-top:4px solid var(--amber);padding:28px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;color:var(--ink);margin-bottom:20px;letter-spacing:-0.5px;">Account Settings</div>
+    <div id="slAccountSettingsMsg" style="display:none;padding:10px 14px;font-size:13px;margin-bottom:14px;border-left:4px solid var(--amber);background:rgba(240,90,0,0.08);font-family:'IBM Plex Mono',monospace;"></div>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Change Password</div>
+      <div class="form-group"><label>Current Password</label><input type="password" id="slAs_curPass" placeholder="••••••••"></div>
+      <div class="form-group"><label>New Password</label><input type="password" id="slAs_newPass" placeholder="Min 8 characters"></div>
+      <div class="form-group" style="margin:0"><label>Confirm New Password</label><input type="password" id="slAs_newPass2" placeholder="Re-enter"></div>
+      <button id="slChangePassBtn" onclick="doSlChangePassword()" style="margin-top:10px;background:transparent;border:1px solid var(--amber);color:var(--amber);font-family:inherit;font-size:13px;font-weight:600;padding:7px 14px;cursor:pointer;">Update Password</button>
+    </div>
+
+    <hr style="border-color:var(--border);margin:16px 0;">
+
+    <div style="margin-bottom:20px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Change Email Address</div>
+      <div class="form-group" style="margin:0"><label>New Email</label><input type="email" id="slAs_email" placeholder="new@example.com"></div>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 10px;">A confirmation link will be sent to the new address.</p>
+      <button id="slChangeEmailBtn" onclick="doSlChangeEmail()" style="background:transparent;border:1px solid var(--amber);color:var(--amber);font-family:inherit;font-size:13px;font-weight:600;padding:7px 14px;cursor:pointer;">Update Email</button>
+    </div>
+
+    <hr style="border-color:var(--border);margin:16px 0;">
+
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#C04040;margin-bottom:8px;">Danger Zone</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Permanently deletes your account and all spray records. Cannot be undone.</p>
+      <button onclick="doSlDeleteAccount()" style="background:transparent;border:1px solid #C04040;color:#C04040;font-family:inherit;font-size:13px;font-weight:600;padding:7px 14px;cursor:pointer;">Delete My Account</button>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+      <button onclick="closeAccountSettings()" style="background:transparent;border:1px dashed var(--border);color:var(--muted);font-family:inherit;font-size:13px;padding:7px 14px;cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════ APP ════════ -->
 <div id="app" class="hidden">
 
@@ -797,6 +856,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </nav>
     <div class="hdr-right">
       <span class="mode-badge mode-own" id="modeBadge" onclick="toggleMode()">Own Farm</span>
+      <button class="user-btn" onclick="openAccountSettings()" style="border-color:var(--border);color:var(--muted);">⚙</button>
       <button class="user-btn" onclick="doLogout()" id="userBtn">Sign Out</button>
     </div>
   </div>
@@ -1344,9 +1404,14 @@ let productRowCount = 0;
 // AUTH
 // ══════════════════════════════════════════════════════
 function setAuthTab(tab) {
-  document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
-  document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
-  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
+  const panels = ['loginForm','signupForm','resetForm','newPassForm'];
+  panels.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle('hidden', id !== tab+'Form');
+  });
+  document.querySelectorAll('.auth-tab').forEach((t,i) => {
+    t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')||(i===2&&tab==='reset'));
+  });
   document.getElementById('authMsg').innerHTML = '';
 }
 
@@ -1409,6 +1474,130 @@ async function doLogout() {
   currentUser = null; userProfile = null;
   document.getElementById('app').classList.add('hidden');
   document.getElementById('authScreen').classList.remove('hidden');
+  setAuthTab('login');
+}
+
+async function doReset() {
+  const email = document.getElementById('re_email').value.trim();
+  if(!email){authMsg('Please enter your email address.');return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){authMsg('Please enter a valid email address.');return;}
+  const btn=document.getElementById('resetBtn');btn.disabled=true;btn.textContent='Sending...';
+  try{
+    const {error}=await sb.auth.resetPasswordForEmail(email);
+    if(error)throw error;
+    authMsg('If an account exists for '+email+', a reset link has been sent. Check your inbox and spam folder.','success');
+  }catch(e){authMsg(e.message||'Could not send reset email. Please try again.');}
+  btn.disabled=false;btn.textContent='Send Reset Link';
+}
+
+// ─── URL HASH CALLBACK HANDLER ───
+function handleAuthCallback(){
+  const hash=window.location.hash;
+  if(!hash||!hash.includes('access_token'))return false;
+  const params=new URLSearchParams(hash.replace('#',''));
+  const token=params.get('access_token');
+  const type=params.get('type');
+  if(!token)return false;
+  window.history.replaceState(null,'',window.location.pathname);
+  if(type==='recovery'){
+    window._recoveryToken=token;
+    // Show new password form
+    document.querySelectorAll('.auth-tab').forEach(b=>b.style.display='none');
+    ['loginForm','signupForm','resetForm'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.classList.add('hidden');
+    });
+    document.getElementById('newPassForm').classList.remove('hidden');
+    authMsg('Enter your new password below.','success');
+    return true;
+  }
+  if(type==='signup'||type==='email_confirmation'){
+    // Auto sign in after email confirmation
+    sb.auth.setSession({access_token:token,refresh_token:params.get('refresh_token')||''})
+      .then(({data})=>{
+        if(data?.user)bootApp(data.user);
+      }).catch(()=>{});
+    return true;
+  }
+  return false;
+}
+
+async function doSetNewPassword(){
+  const pw=document.getElementById('np_pass').value;
+  const pw2=document.getElementById('np_pass2').value;
+  if(!pw||pw.length<8){authMsg('Password must be at least 8 characters.');return;}
+  if(pw!==pw2){authMsg('Passwords do not match.');return;}
+  const btn=document.getElementById('newPassBtn');btn.disabled=true;btn.textContent='Saving...';
+  try{
+    const token=window._recoveryToken;
+    if(!token){authMsg('Reset session expired. Please request a new reset link.');btn.disabled=false;btn.textContent='Set New Password';return;}
+    const {error}=await sb.auth.updateUser({password:pw});
+    if(error)throw error;
+    window._recoveryToken=null;
+    document.querySelectorAll('.auth-tab').forEach(b=>b.style.display='');
+    document.getElementById('newPassForm').classList.add('hidden');
+    setAuthTab('login');
+    authMsg('Password updated successfully. You can now sign in.','success');
+  }catch(e){authMsg(e.message||'Could not update password.');}
+  btn.disabled=false;btn.textContent='Set New Password';
+}
+
+// ─── ACCOUNT SETTINGS (Change Password / Email / Delete) ───
+function openAccountSettings(){
+  document.getElementById('slAs_curPass').value='';
+  document.getElementById('slAs_newPass').value='';
+  document.getElementById('slAs_newPass2').value='';
+  document.getElementById('slAs_email').value='';
+  document.getElementById('slAccountSettingsMsg').style.display='none';
+  document.getElementById('slAccountSettingsModal').classList.remove('hidden');
+}
+function closeAccountSettings(){document.getElementById('slAccountSettingsModal').classList.add('hidden');}
+function showSlSettingsMsg(msg,isError=false){
+  const el=document.getElementById('slAccountSettingsMsg');
+  el.textContent=msg;el.style.display='block';
+  el.style.color=isError?'var(--red)':'#4CAF50';
+  el.style.borderLeftColor=isError?'var(--red)':'#4CAF50';
+}
+async function doSlChangePassword(){
+  const cur=document.getElementById('slAs_curPass').value;
+  const nw=document.getElementById('slAs_newPass').value;
+  const nw2=document.getElementById('slAs_newPass2').value;
+  if(!cur){showSlSettingsMsg('Enter your current password.',true);return;}
+  if(!nw||nw.length<8){showSlSettingsMsg('New password must be at least 8 characters.',true);return;}
+  if(nw!==nw2){showSlSettingsMsg('Passwords do not match.',true);return;}
+  const btn=document.getElementById('slChangePassBtn');btn.disabled=true;btn.textContent='Updating...';
+  try{
+    const {error:signInErr}=await sb.auth.signInWithPassword({email:currentUser.email,password:cur});
+    if(signInErr)throw new Error('Current password is incorrect.');
+    const {error}=await sb.auth.updateUser({password:nw});
+    if(error)throw error;
+    showSlSettingsMsg('Password updated successfully.');
+    document.getElementById('slAs_curPass').value='';
+    document.getElementById('slAs_newPass').value='';
+    document.getElementById('slAs_newPass2').value='';
+  }catch(e){showSlSettingsMsg(e.message,true);}
+  btn.disabled=false;btn.textContent='Update Password';
+}
+async function doSlChangeEmail(){
+  const email=document.getElementById('slAs_email').value.trim();
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showSlSettingsMsg('Enter a valid email address.',true);return;}
+  const btn=document.getElementById('slChangeEmailBtn');btn.disabled=true;btn.textContent='Sending...';
+  try{
+    const {error}=await sb.auth.updateUser({email});
+    if(error)throw error;
+    showSlSettingsMsg('Confirmation sent to '+email+'. Click the link to confirm the change.');
+    document.getElementById('slAs_email').value='';
+  }catch(e){showSlSettingsMsg(e.message,true);}
+  btn.disabled=false;btn.textContent='Update Email';
+}
+async function doSlDeleteAccount(){
+  if(!confirm('This permanently deletes your account and all spray records. This CANNOT be undone.\n\nAre you sure?'))return;
+  if(!confirm('Final confirmation — delete everything?'))return;
+  try{
+    await sb.from('spray_logs').delete().eq('owner_id',currentUser.id);
+    await sb.from('customers').delete().eq('owner_id',currentUser.id);
+    await doLogout();
+    alert('Account deleted. Contact support@knowyourground.com if you need help.');
+  }catch(e){showSlSettingsMsg('Error: '+e.message+'. Contact support@knowyourground.com.',true);}
 }
 
 async function bootApp(user) {
@@ -2988,6 +3177,8 @@ function formatDate(str) {
 // ══════════════════════════════════════════════════════
 (async () => {
   try {
+    // Handle email link callbacks first (password reset, email confirmation)
+    if(handleAuthCallback()) return;
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
     if (data && data.session && data.session.user) {
