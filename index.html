@@ -800,17 +800,38 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <p>Track. Record. Comply.</p>
     </div>
     <div class="auth-card">
-      <div class="auth-tabs">
-        <button class="auth-tab active" onclick="setAuthTab('login')">Sign In</button>
-        <button class="auth-tab" onclick="setAuthTab('signup')">Create Account</button>
+      <div class="auth-tabs" id="authTabBar">
+        <button class="auth-tab active" id="tabLogin" onclick="setAuthTab('login')">Sign In</button>
+        <button class="auth-tab" id="tabSignup" onclick="setAuthTab('signup')">Create Account</button>
       </div>
       <div id="authMsg"></div>
 
       <!-- LOGIN -->
       <div id="loginForm">
-        <div class="form-group"><label>Email</label><input type="email" id="li_email" placeholder="you@farm.com"></div>
-        <div class="form-group"><label>Password</label><input type="password" id="li_pass" placeholder="••••••••"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="li_email" placeholder="you@farm.com" autocomplete="email"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="li_pass" placeholder="••••••••" autocomplete="current-password"></div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Sign In</button>
+        <div style="text-align:center;margin-top:14px;">
+          <button onclick="setAuthTab('reset')" style="background:none;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Forgot your password?</button>
+        </div>
+      </div>
+
+      <!-- FORGOT PASSWORD -->
+      <div id="resetForm" class="hidden">
+        <p style="font-size:14px;color:var(--ink-2);margin-bottom:16px;line-height:1.6;">Enter your email address and we'll send you a link to reset your password.</p>
+        <div class="form-group"><label>Email</label><input type="email" id="reset_email" placeholder="you@farm.com" autocomplete="email"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doReset()">Send Reset Link</button>
+        <div style="text-align:center;margin-top:14px;">
+          <button onclick="setAuthTab('login')" style="background:none;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Back to Sign In</button>
+        </div>
+      </div>
+
+      <!-- SET NEW PASSWORD (shown after clicking reset link) -->
+      <div id="newPassForm" class="hidden">
+        <p style="font-size:14px;color:var(--ink-2);margin-bottom:16px;line-height:1.6;">Enter your new password below.</p>
+        <div class="form-group"><label>New Password</label><input type="password" id="newPass1" placeholder="Min 6 characters" autocomplete="new-password"></div>
+        <div class="form-group"><label>Confirm New Password</label><input type="password" id="newPass2" placeholder="••••••••" autocomplete="new-password"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doSetNewPassword()">Set New Password</button>
       </div>
 
       <!-- SIGNUP -->
@@ -1192,6 +1213,42 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div style="display:flex;justify-content:flex-end;margin-top:8px;">
         <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
       </div>
+
+      <!-- ACCOUNT SETTINGS -->
+      <div class="card" style="margin-top:8px;">
+        <div class="sec-label">Account Settings</div>
+
+        <!-- Change Email -->
+        <div style="margin-bottom:20px;">
+          <div style="font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:600;color:var(--ink);margin-bottom:10px;">Change Email Address</div>
+          <div class="form-row c2">
+            <div class="form-group" style="margin:0"><label>New Email</label><input type="email" id="as_newEmail" placeholder="new@email.com"></div>
+            <div class="form-group" style="margin:0"><label>Current Password</label><input type="password" id="as_emailPass" placeholder="••••••••"></div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="doChangeEmail()">Update Email</button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+
+        <!-- Change Password -->
+        <div style="margin-bottom:20px;">
+          <div style="font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:600;color:var(--ink);margin-bottom:10px;">Change Password</div>
+          <div class="form-row c2">
+            <div class="form-group" style="margin:0"><label>New Password</label><input type="password" id="as_newPass1" placeholder="Min 6 characters"></div>
+            <div class="form-group" style="margin:0"><label>Confirm New Password</label><input type="password" id="as_newPass2" placeholder="••••••••"></div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="doChangePassword()">Update Password</button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+
+        <!-- Delete Account -->
+        <div>
+          <div style="font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:600;color:var(--red);margin-bottom:6px;">Danger Zone</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Permanently delete your account and all associated data. This cannot be undone.</p>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteAccount()">Delete My Account</button>
+        </div>
+      </div>
     </div>
 
     <!-- ══ SUMMARY TAB ══ -->
@@ -1309,14 +1366,106 @@ let productRowCount = 0;
 // AUTH
 // ══════════════════════════════════════════════════════
 function setAuthTab(tab) {
-  document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
-  document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
-  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
+  ['loginForm','signupForm','resetForm','newPassForm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', id !== tab + 'Form');
+  });
+  // Tab bar visibility — hide tabs for reset/newpass screens
+  const tabBar = document.getElementById('authTabBar');
+  if (tabBar) tabBar.classList.toggle('hidden', tab === 'reset' || tab === 'newpass');
+  document.querySelectorAll('.auth-tab').forEach(t => {
+    t.classList.toggle('active',
+      (t.id === 'tabLogin' && tab === 'login') ||
+      (t.id === 'tabSignup' && tab === 'signup')
+    );
+  });
   document.getElementById('authMsg').innerHTML = '';
 }
 
 function authMsg(msg, type='error') {
   document.getElementById('authMsg').innerHTML = `<div class="auth-${type}">${msg}</div>`;
+}
+
+// ── PASSWORD RESET ──
+async function doReset() {
+  const email = document.getElementById('reset_email').value.trim();
+  if (!email) { authMsg('Please enter your email address.'); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if (error) { authMsg(error.message); return; }
+  authMsg('Reset link sent! Check your email inbox (and spam folder).', 'success');
+  document.getElementById('reset_email').value = '';
+}
+
+async function doSetNewPassword() {
+  const p1 = document.getElementById('newPass1').value;
+  const p2 = document.getElementById('newPass2').value;
+  if (!p1) { authMsg('Please enter a new password.'); return; }
+  if (p1.length < 6) { authMsg('Password must be at least 6 characters.'); return; }
+  if (p1 !== p2) { authMsg('Passwords do not match.'); return; }
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  if (error) { authMsg(error.message); return; }
+  authMsg('Password updated! Signing you in...', 'success');
+  setTimeout(() => setAuthTab('login'), 1500);
+}
+
+// ── ACCOUNT SETTINGS ──
+async function doChangeEmail() {
+  const newEmail = document.getElementById('as_newEmail').value.trim();
+  const pass = document.getElementById('as_emailPass').value;
+  if (!newEmail) { toast('Please enter a new email address.', 'warn'); return; }
+  if (!pass) { toast('Please enter your current password to confirm.', 'warn'); return; }
+  // Re-authenticate first
+  const { error: signInErr } = await sb.auth.signInWithPassword({
+    email: currentUser.email, password: pass
+  });
+  if (signInErr) { toast('Current password is incorrect.', 'warn'); return; }
+  const { error } = await sb.auth.updateUser({ email: newEmail });
+  if (error) { toast('Email update failed: ' + error.message, 'warn'); return; }
+  toast('Confirmation sent to ' + newEmail + '. Check your inbox.');
+  document.getElementById('as_newEmail').value = '';
+  document.getElementById('as_emailPass').value = '';
+}
+
+async function doChangePassword() {
+  const p1 = document.getElementById('as_newPass1').value;
+  const p2 = document.getElementById('as_newPass2').value;
+  if (!p1) { toast('Please enter a new password.', 'warn'); return; }
+  if (p1.length < 6) { toast('Password must be at least 6 characters.', 'warn'); return; }
+  if (p1 !== p2) { toast('Passwords do not match.', 'warn'); return; }
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  if (error) { toast('Password update failed: ' + error.message, 'warn'); return; }
+  toast('Password updated successfully.');
+  document.getElementById('as_newPass1').value = '';
+  document.getElementById('as_newPass2').value = '';
+}
+
+async function confirmDeleteAccount() {
+  const confirmed = confirm(
+    'Are you absolutely sure you want to delete your account?\n\n' +
+    'This will permanently delete all your spray records, field data, and profile. ' +
+    'This CANNOT be undone.'
+  );
+  if (!confirmed) return;
+  const doubleConfirm = confirm('Last chance — delete everything permanently?');
+  if (!doubleConfirm) return;
+  try {
+    // Delete all user data first
+    await sb.from('spray_logs').delete().eq('owner_id', currentUser.id);
+    await sb.from('customers').delete().eq('owner_id', currentUser.id);
+    await sb.from('profiles').delete().eq('id', currentUser.id);
+    await sb.from('feedback').delete().eq('user_id', currentUser.id);
+    // Sign out — Supabase deletes the auth user via RLS/trigger
+    await sb.auth.signOut();
+    currentUser = null; userProfile = null;
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('feedbackBtn').classList.add('hidden');
+    alert('Your account has been deleted. Sorry to see you go.');
+  } catch(e) {
+    toast('Deletion failed: ' + e.message + '. Please contact support.', 'warn');
+  }
 }
 
 async function doLogin() {
@@ -3064,9 +3213,29 @@ function formatDate(str) {
 // ══════════════════════════════════════════════════════
 (async () => {
   try {
+    // Check for password recovery or email change link in URL hash
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      // Let Supabase pick up the session from the URL
+      const { data } = await sb.auth.getSession();
+      if (data?.session) {
+        // Show set new password screen — don't boot full app
+        document.getElementById('authScreen').classList.remove('hidden');
+        setAuthTab('newpass');
+        return;
+      }
+    }
+    if (hash && hash.includes('type=email_change')) {
+      const { data } = await sb.auth.getSession();
+      if (data?.session?.user) {
+        await bootApp(data.session.user);
+        toast('Email address updated successfully.');
+        return;
+      }
+    }
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
-    if (data && data.session && data.session.user) {
+    if (data?.session?.user) {
       await bootApp(data.session.user);
     }
   } catch(e) {
