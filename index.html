@@ -3645,39 +3645,76 @@ function formatDate(str) {
 // INIT
 // ══════════════════════════════════════════════════════
 
-// Supabase PKCE flow puts a ?code= param in the URL for password recovery.
-// We must exchange it FIRST, then check what type of session it produced.
+// Track whether we are in password-reset mode
+let _inPasswordReset = false;
+
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    _inPasswordReset = true;
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('feedbackBtn').classList.add('hidden');
+    history.replaceState(null, '', window.location.pathname);
+    setAuthTab('newpass');
+    return;
+  }
+  if (event === 'USER_UPDATED') {
+    _inPasswordReset = false;
+    if (session?.user) {
+      authMsg('Password updated! Signing you in...', 'success');
+      setTimeout(async () => {
+        document.getElementById('authScreen').classList.add('hidden');
+        await bootApp(session.user);
+      }, 1000);
+    }
+    return;
+  }
+  if (event === 'SIGNED_IN' && session?.user && _inPasswordReset) {
+    // Supabase fires SIGNED_IN after PASSWORD_RECOVERY — ignore it
+    return;
+  }
+  if (event === 'EMAIL_CHANGE' && session?.user) {
+    await bootApp(session.user);
+    toast('Email address updated successfully.');
+    return;
+  }
+});
+
 (async () => {
   try {
+    // Handle PKCE ?code= param in URL (Supabase recovery / magic link flow)
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
 
     if (code) {
-      // Exchange the code for a session
-      const { data, error } = await sb.auth.exchangeCodeForSession(code);
-      // Clean the URL immediately so refresh doesn't re-trigger
+      // Clean URL first so refresh doesn't re-run this
       history.replaceState(null, '', window.location.pathname);
 
+      const { data, error } = await sb.auth.exchangeCodeForSession(code);
+
       if (error) {
-        // Bad/expired link
         authMsg('This reset link has expired. Please request a new one.');
         setAuthTab('reset');
         return;
       }
 
-      // Check what type of session this is
-      // Recovery sessions have aal1 and were triggered by recovery flow
-      if (data?.session) {
-        // Show new password form — do NOT boot the full app
-        document.getElementById('authScreen').classList.remove('hidden');
-        document.getElementById('app').classList.add('hidden');
-        document.getElementById('feedbackBtn').classList.add('hidden');
-        setAuthTab('newpass');
-        return;
+      // After exchange, onAuthStateChange fires PASSWORD_RECOVERY automatically
+      // if this was a recovery link — so we just wait for that event.
+      // If it was a different flow (email confirm etc), fall through to normal boot.
+      // Give the event 300ms to fire before deciding
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // If PASSWORD_RECOVERY already fired, _inPasswordReset is true — stop here
+      if (_inPasswordReset) return;
+
+      // Otherwise it was a non-recovery code — boot normally
+      if (data?.session?.user) {
+        await bootApp(data.session.user);
       }
+      return;
     }
 
-    // Normal page load — restore existing session
+    // Normal page load — check for existing session
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
     if (data?.session?.user) {
@@ -3687,22 +3724,6 @@ function formatDate(str) {
     console.error('Boot error:', e);
   }
 })();
-
-// Listen for password update completion
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'USER_UPDATED' && session?.user) {
-    // New password saved — boot into the app
-    document.getElementById('authScreen').classList.add('hidden');
-    authMsg('Password updated! Signing you in...', 'success');
-    setTimeout(async () => { await bootApp(session.user); }, 1000);
-    return;
-  }
-  if (event === 'EMAIL_CHANGE' && session?.user) {
-    await bootApp(session.user);
-    toast('Email address updated successfully.');
-    return;
-  }
-});
 </script>
 <!-- SHARE MODAL -->
 <div class="modal-overlay hidden" id="shareModal">
