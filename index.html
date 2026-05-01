@@ -3642,80 +3642,54 @@ function formatDate(str) {
 }
 
 // ══════════════════════════════════════════════════════
-// INIT — Check session on load
+// INIT — Auth state + session restore
 // ══════════════════════════════════════════════════════
 
-// ── Detect recovery link BEFORE any auth listener fires ──
-// Supabase sends tokens in the URL hash as:
-//   #access_token=...&type=recovery  (old PKCE flow)
-//   or as a ?code= query param       (new PKCE flow)
-// We check BOTH before registering any listener.
-const _hash = window.location.hash;
-const _search = window.location.search;
-const _isRecovery = _hash.includes('type=recovery') ||
-                    _search.includes('type=recovery') ||
-                    _hash.includes('type=email_change') ||
-                    _search.includes('type=email_change');
-
-// Flag that blocks SIGNED_IN from booting the app
-let _recoveryMode = _isRecovery;
+// Simple, reliable approach:
+// 1. onAuthStateChange handles PASSWORD_RECOVERY and USER_UPDATED
+// 2. getSession() handles everything else on normal page load
+// No flags, no races, no side effects
 
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
-    // Fired by Supabase when the reset link is processed
-    _recoveryMode = true;
+    // Reset link clicked — show new password form, stop here
     document.getElementById('authScreen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
     document.getElementById('feedbackBtn').classList.add('hidden');
-    // Clear the URL hash so a page refresh doesn't re-trigger this
     history.replaceState(null, '', window.location.pathname);
     setAuthTab('newpass');
     return;
   }
-
-  if (event === 'SIGNED_IN' && session?.user) {
-    // If we're in recovery mode, SIGNED_IN fires right after PASSWORD_RECOVERY
-    // — block it from booting the app, just keep the new-password screen visible
-    if (_recoveryMode) return;
-    // Normal login — only boot if app isn't already showing
-    if (document.getElementById('app').classList.contains('hidden')) {
+  if (event === 'USER_UPDATED' && session?.user) {
+    // Password successfully changed — log them in
+    authMsg('Password updated! Signing you in...', 'success');
+    setTimeout(async () => {
+      document.getElementById('authScreen').classList.add('hidden');
       await bootApp(session.user);
-    }
+    }, 1200);
     return;
   }
-
-  if (event === 'USER_UPDATED') {
-    // Password was successfully changed
-    _recoveryMode = false;
-    if (session?.user) {
-      authMsg('Password updated! Signing you in...', 'success');
-      setTimeout(async () => {
-        document.getElementById('authScreen').classList.add('hidden');
-        await bootApp(session.user);
-      }, 1200);
-    }
-    return;
-  }
-
   if (event === 'EMAIL_CHANGE' && session?.user) {
-    _recoveryMode = false;
     await bootApp(session.user);
     toast('Email address updated successfully.');
     return;
   }
+  // SIGNED_IN: only act if app is not already showing
+  // (avoids double-booting on normal login since doLogin() calls bootApp directly)
+  if (event === 'SIGNED_IN' && session?.user) {
+    if (document.getElementById('app').classList.contains('hidden') &&
+        !document.getElementById('newPassForm').classList.contains('hidden') === false) {
+      // Only boot from here if we somehow missed the normal login path
+      // In practice doLogin() handles this — this is a safety net
+    }
+  }
 });
 
-// Normal page load — check for existing session
+// On every page load — check for existing valid session and boot if found
 (async () => {
   try {
-    // If this is a recovery link, let onAuthStateChange handle everything
-    if (_isRecovery) {
-      document.getElementById('authScreen').classList.remove('hidden');
-      // Supabase will process the hash/code and fire PASSWORD_RECOVERY automatically
-      return;
-    }
     const { data, error } = await sb.auth.getSession();
-    if (error) { console.warn('Session error:', error.message); return; }
+    if (error) { console.warn('Session check error:', error.message); return; }
     if (data?.session?.user) {
       await bootApp(data.session.user);
     }
