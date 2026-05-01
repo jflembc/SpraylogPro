@@ -1013,7 +1013,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;">BUILD 2026.05.01.11</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;">BUILD 2026.05.01.12</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1105,7 +1105,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;">BUILD 2026.05.01.11</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;">BUILD 2026.05.01.12</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
@@ -1492,6 +1492,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <button class="sum-filter" data-filter="q2" onclick="setSummaryFilter('q2')">Q2 · Apr–Jun</button>
           <button class="sum-filter" data-filter="q3" onclick="setSummaryFilter('q3')">Q3 · Jul–Sep</button>
           <button class="sum-filter" data-filter="q4" onclick="setSummaryFilter('q4')">Q4 · Oct–Dec</button>
+          <select id="summaryYearPicker" onchange="setSummaryFilter('year_pick')" class="sum-month-pick">
+            <option value="">Year...</option>
+          </select>
           <select id="summaryMonthPicker" onchange="setSummaryFilter('month')" class="sum-month-pick">
             <option value="">Month...</option>
             <option value="1">January</option><option value="2">February</option>
@@ -2738,7 +2741,7 @@ function switchTab(tab) {
   if (tab === 'chemicals') renderChemicalsTable();
   if (tab === 'customers') renderCustomersList();
   if (tab === 'logs') { loadLogs(); }
-  if (tab === 'summary') { renderSummaryTab(); }
+  if (tab === 'summary') { populateYearPicker(); renderSummaryTab(); }
   // Scroll to top on tab change
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2751,6 +2754,7 @@ function switchTab(tab) {
 // ══════════════════════════════════════════════════════
 let summaryFilter = 'all';
 let summaryFilterMonth = null;
+let summaryFilterYear = null;
 
 function setSummaryFilter(type) {
   summaryFilter = type;
@@ -2759,12 +2763,35 @@ function setSummaryFilter(type) {
     summaryFilterMonth = parseInt(document.getElementById('summaryMonthPicker').value);
     if (!summaryFilterMonth) { summaryFilter = 'all'; }
   }
-  // Update active pill
+  if (type !== 'year_pick') summaryFilterYear = null;
+  else {
+    summaryFilterYear = parseInt(document.getElementById('summaryYearPicker').value);
+    if (!summaryFilterYear) { summaryFilter = 'all'; }
+  }
+  // Update active pills
   document.querySelectorAll('.sum-filter').forEach(b => {
     b.classList.toggle('active', b.dataset.filter === type);
   });
   if (type !== 'month') document.getElementById('summaryMonthPicker').value = '';
+  if (type !== 'year_pick') document.getElementById('summaryYearPicker').value = '';
   renderSummaryTab();
+}
+
+function populateYearPicker() {
+  const sel = document.getElementById('summaryYearPicker');
+  if (!sel) return;
+  const years = [...new Set(
+    allLogs
+      .filter(l => l.application_date)
+      .map(l => l.application_date.slice(0, 4))
+  )].sort((a, b) => b - a); // newest first
+  sel.innerHTML = '<option value="">Year...</option>';
+  years.forEach(y => {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = y;
+    sel.appendChild(o);
+  });
 }
 
 function getFilteredLogs() {
@@ -2789,6 +2816,10 @@ function getFilteredLogs() {
   if (summaryFilter === 'all') {
     if (labelEl) labelEl.textContent = filterLabels.all;
     return completed;
+  }
+  if (summaryFilter === 'year_pick' && summaryFilterYear) {
+    if (labelEl) labelEl.textContent = summaryFilterYear + ' — Full Year';
+    return completed.filter(l => l.application_date && l.application_date.startsWith(summaryFilterYear));
   }
   if (summaryFilter === 'year') {
     if (labelEl) labelEl.textContent = filterLabels.year;
