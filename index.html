@@ -3642,31 +3642,59 @@ function formatDate(str) {
 }
 
 // ══════════════════════════════════════════════════════
-// INIT — Auth state + session restore
+// INIT
 // ══════════════════════════════════════════════════════
 
-// Simple, reliable approach:
-// 1. onAuthStateChange handles PASSWORD_RECOVERY and USER_UPDATED
-// 2. getSession() handles everything else on normal page load
-// No flags, no races, no side effects
+// Supabase PKCE flow puts a ?code= param in the URL for password recovery.
+// We must exchange it FIRST, then check what type of session it produced.
+(async () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
 
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'PASSWORD_RECOVERY') {
-    // Reset link clicked — show new password form, stop here
-    document.getElementById('authScreen').classList.remove('hidden');
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('feedbackBtn').classList.add('hidden');
-    history.replaceState(null, '', window.location.pathname);
-    setAuthTab('newpass');
-    return;
+    if (code) {
+      // Exchange the code for a session
+      const { data, error } = await sb.auth.exchangeCodeForSession(code);
+      // Clean the URL immediately so refresh doesn't re-trigger
+      history.replaceState(null, '', window.location.pathname);
+
+      if (error) {
+        // Bad/expired link
+        authMsg('This reset link has expired. Please request a new one.');
+        setAuthTab('reset');
+        return;
+      }
+
+      // Check what type of session this is
+      // Recovery sessions have aal1 and were triggered by recovery flow
+      if (data?.session) {
+        // Show new password form — do NOT boot the full app
+        document.getElementById('authScreen').classList.remove('hidden');
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('feedbackBtn').classList.add('hidden');
+        setAuthTab('newpass');
+        return;
+      }
+    }
+
+    // Normal page load — restore existing session
+    const { data, error } = await sb.auth.getSession();
+    if (error) { console.warn('Session error:', error.message); return; }
+    if (data?.session?.user) {
+      await bootApp(data.session.user);
+    }
+  } catch(e) {
+    console.error('Boot error:', e);
   }
+})();
+
+// Listen for password update completion
+sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'USER_UPDATED' && session?.user) {
-    // Password successfully changed — log them in
+    // New password saved — boot into the app
+    document.getElementById('authScreen').classList.add('hidden');
     authMsg('Password updated! Signing you in...', 'success');
-    setTimeout(async () => {
-      document.getElementById('authScreen').classList.add('hidden');
-      await bootApp(session.user);
-    }, 1200);
+    setTimeout(async () => { await bootApp(session.user); }, 1000);
     return;
   }
   if (event === 'EMAIL_CHANGE' && session?.user) {
@@ -3674,29 +3702,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     toast('Email address updated successfully.');
     return;
   }
-  // SIGNED_IN: only act if app is not already showing
-  // (avoids double-booting on normal login since doLogin() calls bootApp directly)
-  if (event === 'SIGNED_IN' && session?.user) {
-    if (document.getElementById('app').classList.contains('hidden') &&
-        !document.getElementById('newPassForm').classList.contains('hidden') === false) {
-      // Only boot from here if we somehow missed the normal login path
-      // In practice doLogin() handles this — this is a safety net
-    }
-  }
 });
-
-// On every page load — check for existing valid session and boot if found
-(async () => {
-  try {
-    const { data, error } = await sb.auth.getSession();
-    if (error) { console.warn('Session check error:', error.message); return; }
-    if (data?.session?.user) {
-      await bootApp(data.session.user);
-    }
-  } catch(e) {
-    console.error('Session restore error:', e);
-  }
-})();
 </script>
 <!-- SHARE MODAL -->
 <div class="modal-overlay hidden" id="shareModal">
