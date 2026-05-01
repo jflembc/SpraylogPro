@@ -3211,30 +3211,54 @@ function formatDate(str) {
 // ══════════════════════════════════════════════════════
 // INIT — Check session on load
 // ══════════════════════════════════════════════════════
+// ── AUTH STATE LISTENER — handles recovery links and normal sessions ──
+// Must be registered BEFORE getSession() so it catches PASSWORD_RECOVERY event
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    // User clicked the reset link in their email
+    // Show auth screen with set-new-password form, do NOT boot the app
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('feedbackBtn').classList.add('hidden');
+    setAuthTab('newpass');
+    return;
+  }
+  if (event === 'USER_UPDATED') {
+    // Password or email was just updated — boot normally if session exists
+    if (session?.user) {
+      setAuthTab('login');
+      authMsg('Password updated! Signing you in...', 'success');
+      setTimeout(async () => {
+        await bootApp(session.user);
+      }, 1200);
+    }
+    return;
+  }
+  if (event === 'EMAIL_CHANGE') {
+    if (session?.user) {
+      await bootApp(session.user);
+      toast('Email address updated successfully.');
+    }
+    return;
+  }
+  // SIGNED_IN fires on normal login — only boot if not already in app
+  if (event === 'SIGNED_IN' && session?.user) {
+    if (document.getElementById('app').classList.contains('hidden')) {
+      await bootApp(session.user);
+    }
+  }
+});
+
+// Check for existing session on page load
 (async () => {
   try {
-    // Check for password recovery or email change link in URL hash
-    const hash = window.location.hash;
-    if (hash && hash.includes('type=recovery')) {
-      // Let Supabase pick up the session from the URL
-      const { data } = await sb.auth.getSession();
-      if (data?.session) {
-        // Show set new password screen — don't boot full app
-        document.getElementById('authScreen').classList.remove('hidden');
-        setAuthTab('newpass');
-        return;
-      }
-    }
-    if (hash && hash.includes('type=email_change')) {
-      const { data } = await sb.auth.getSession();
-      if (data?.session?.user) {
-        await bootApp(data.session.user);
-        toast('Email address updated successfully.');
-        return;
-      }
-    }
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
+    // Don't boot here if we have a recovery hash — onAuthStateChange handles it
+    const hash = window.location.hash;
+    if (hash && (hash.includes('type=recovery') || hash.includes('type=email_change'))) {
+      return; // onAuthStateChange will fire with the right event
+    }
     if (data?.session?.user) {
       await bootApp(data.session.user);
     }
