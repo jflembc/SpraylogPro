@@ -3653,12 +3653,8 @@ function formatDate(str) {
 // INIT
 // ══════════════════════════════════════════════════════
 
-// Supabase verify links redirect back as a logged-in user with a clean URL.
-// We pass ?reset=1 in redirectTo so we know it's a password reset landing.
-
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'USER_UPDATED' && session?.user) {
-    // Password successfully changed — boot into app
     authMsg('Password updated! Signing you in...', 'success');
     setTimeout(async () => {
       document.getElementById('authScreen').classList.add('hidden');
@@ -3675,14 +3671,12 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
 (async () => {
   try {
+    // Check for password reset redirect — ?reset=1 is appended by doReset()
     const params = new URLSearchParams(window.location.search);
     const isReset = params.get('reset') === '1';
 
     if (isReset) {
-      // Clean the URL immediately
       history.replaceState(null, '', window.location.pathname);
-      // Supabase has already logged them in via the verify redirect.
-      // Show the new password form — keep the session active for updateUser().
       const { data } = await sb.auth.getSession();
       if (data?.session?.user) {
         document.getElementById('authScreen').classList.remove('hidden');
@@ -3691,9 +3685,12 @@ sb.auth.onAuthStateChange(async (event, session) => {
         setAuthTab('newpass');
         return;
       }
+      authMsg('This reset link has expired. Please request a new one.');
+      setAuthTab('reset');
+      return;
     }
 
-    // Normal page load
+    // Normal load — restore session
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
     if (data?.session?.user) {
