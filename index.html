@@ -1650,7 +1650,7 @@ async function doReset() {
   const email = document.getElementById('reset_email').value.trim();
   if (!email) { authMsg('Please enter your email address.'); return; }
   const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + window.location.pathname
+    redirectTo: window.location.origin + window.location.pathname + '?reset=1'
   });
   if (error) { authMsg(error.message); return; }
   authMsg('Reset link sent! Check your email inbox (and spam folder).', 'success');
@@ -3653,41 +3653,12 @@ function formatDate(str) {
 // INIT
 // ══════════════════════════════════════════════════════
 
-// This project uses Supabase implicit flow (not PKCE).
-// Reset links arrive as: spraylogpro.pages.dev/#access_token=...&type=recovery
-// Supabase JS client processes the hash automatically and fires PASSWORD_RECOVERY.
-// We MUST register onAuthStateChange BEFORE calling getSession() so we
-// catch PASSWORD_RECOVERY before SIGNED_IN can boot the app.
+// Supabase verify links redirect back as a logged-in user with a clean URL.
+// We pass ?reset=1 in redirectTo so we know it's a password reset landing.
 
-let _recoveryMode = false;
-
-// Register listener FIRST — before anything else
 sb.auth.onAuthStateChange(async (event, session) => {
-
-  if (event === 'PASSWORD_RECOVERY') {
-    _recoveryMode = true;
-    // Clear the hash from URL so refresh doesn't re-trigger
-    history.replaceState(null, '', window.location.pathname);
-    // Show new password form — do not boot app
-    document.getElementById('authScreen').classList.remove('hidden');
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('feedbackBtn').classList.add('hidden');
-    setAuthTab('newpass');
-    return;
-  }
-
-  if (event === 'SIGNED_IN' && session?.user) {
-    // Block SIGNED_IN from booting the app while in recovery mode
-    if (_recoveryMode) return;
-    // Only boot if app is not already showing
-    if (document.getElementById('app').classList.contains('hidden')) {
-      await bootApp(session.user);
-    }
-    return;
-  }
-
   if (event === 'USER_UPDATED' && session?.user) {
-    _recoveryMode = false;
+    // Password successfully changed — boot into app
     authMsg('Password updated! Signing you in...', 'success');
     setTimeout(async () => {
       document.getElementById('authScreen').classList.add('hidden');
@@ -3695,29 +3666,37 @@ sb.auth.onAuthStateChange(async (event, session) => {
     }, 1000);
     return;
   }
-
   if (event === 'EMAIL_CHANGE' && session?.user) {
     await bootApp(session.user);
     toast('Email address updated successfully.');
     return;
   }
-
-  if (event === 'SIGNED_OUT') {
-    // Ensure app is hidden and auth is shown
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('authScreen').classList.remove('hidden');
-    document.getElementById('feedbackBtn').classList.add('hidden');
-    return;
-  }
 });
 
-// NOW check for existing session — listener is already registered above
 (async () => {
   try {
+    const params = new URLSearchParams(window.location.search);
+    const isReset = params.get('reset') === '1';
+
+    if (isReset) {
+      // Clean the URL immediately
+      history.replaceState(null, '', window.location.pathname);
+      // Supabase has already logged them in via the verify redirect.
+      // Show the new password form — keep the session active for updateUser().
+      const { data } = await sb.auth.getSession();
+      if (data?.session?.user) {
+        document.getElementById('authScreen').classList.remove('hidden');
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('feedbackBtn').classList.add('hidden');
+        setAuthTab('newpass');
+        return;
+      }
+    }
+
+    // Normal page load
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
-    // If session exists AND we are not in recovery mode, boot normally
-    if (data?.session?.user && !_recoveryMode) {
+    if (data?.session?.user) {
       await bootApp(data.session.user);
     }
   } catch(e) {
