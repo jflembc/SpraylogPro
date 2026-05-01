@@ -321,6 +321,40 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 }
 .remove-row-btn:hover{background:var(--red);color:#fff;border-color:var(--red);}
 
+/* ══ SUMMARY FILTER ══ */
+.sum-filter {
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  border-radius: 50px;
+  padding: 6px 14px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink-2);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.sum-filter:hover { border-color: var(--orange); color: var(--orange); }
+.sum-filter.active { background: var(--orange); border-color: var(--orange); color: #fff; }
+
+/* ══ ACHIEVEMENT CARDS ══ */
+.achievement-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.achievement-card.gold { border-color: #D4AF37; background: #FFFDF0; }
+.achievement-card .ach-icon { font-size: 28px; flex-shrink: 0; }
+.achievement-card .ach-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 3px; }
+.achievement-card .ach-val { font-family: 'IBM Plex Sans', sans-serif; font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+.achievement-card .ach-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
 /* ══ FEEDBACK BUTTON ══ */
 #feedbackBtn {
   position: fixed;
@@ -1253,23 +1287,62 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
     <!-- ══ SUMMARY TAB ══ -->
     <div id="tab-summary" class="tab-content hidden">
-      <div class="flex-between" style="margin-bottom:16px;">
+
+      <!-- HEADER ROW -->
+      <div class="flex-between" style="margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <div style="font-family:'IBM Plex Sans',sans-serif;font-size:28px;font-weight:700;color:var(--ink);letter-spacing:-0.5px;">Season Summary</div>
-        <button class="btn btn-outline btn-sm" onclick="exportSummaryCSV()">⬇ Export CSV</button>
+        <div class="flex-gap">
+          <button class="btn btn-outline btn-sm" onclick="exportSummaryCSV()">⬇ CSV</button>
+          <button class="btn btn-sky btn-sm" onclick="uploadSummaryToDrive()">⬆ Save to Drive</button>
+        </div>
       </div>
-      <!-- KPI BOXES -->
-      <div class="results-grid" id="summaryKPIs" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px;"></div>
+
+      <!-- FILTER BAR -->
+      <div style="background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);font-weight:700;white-space:nowrap;">FILTER BY</span>
+        <div id="summaryFilterBtns" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;">
+          <button class="sum-filter active" data-filter="all" onclick="setSummaryFilter('all')">All Time</button>
+          <button class="sum-filter" data-filter="year" onclick="setSummaryFilter('year')">This Year</button>
+          <button class="sum-filter" data-filter="season" onclick="setSummaryFilter('season')">Growing Season</button>
+          <button class="sum-filter" data-filter="q1" onclick="setSummaryFilter('q1')">Q1 Jan–Mar</button>
+          <button class="sum-filter" data-filter="q2" onclick="setSummaryFilter('q2')">Q2 Apr–Jun</button>
+          <button class="sum-filter" data-filter="q3" onclick="setSummaryFilter('q3')">Q3 Jul–Sep</button>
+          <button class="sum-filter" data-filter="q4" onclick="setSummaryFilter('q4')">Q4 Oct–Dec</button>
+        </div>
+        <!-- Month picker -->
+        <select id="summaryMonthPicker" onchange="setSummaryFilter('month')" style="max-width:140px;font-size:13px;padding:7px 10px;">
+          <option value="">Month...</option>
+          <option value="1">January</option><option value="2">February</option>
+          <option value="3">March</option><option value="4">April</option>
+          <option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option>
+          <option value="9">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--orange);font-weight:700;" id="summaryFilterLabel">All Records</span>
+      </div>
+
+      <!-- MAIN KPIs -->
+      <div class="results-grid" id="summaryKPIs" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px;"></div>
+
+      <!-- ACHIEVEMENT BADGES -->
+      <div style="margin-bottom:16px;">
+        <div class="sec-label">Personal Bests</div>
+        <div id="summaryAchievements" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;"></div>
+      </div>
+
       <!-- YOY COMPARISON -->
-      <div id="yoySection" class="card-dark hidden" style="margin-bottom:14px;">
+      <div id="yoySection" class="card-dark hidden" style="margin-bottom:16px;">
         <div class="sec-label">Year-Over-Year</div>
         <div id="yoyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;"></div>
       </div>
+
       <!-- RECORDS TABLE -->
       <div class="sec-label">Completed Records</div>
       <div class="card-dark">
         <div class="data-table-wrap"><table class="data-table">
           <thead><tr>
-            <th>Date</th><th>Commodity</th><th>Acres</th><th>Products</th><th>Wind</th><th>Temp</th><th>Time</th><th>Share</th>
+            <th>Date</th><th>Field</th><th>Commodity</th><th>Acres</th><th>Products</th><th>Wind</th><th>Temp</th><th>Time</th><th>Share</th>
           </tr></thead>
           <tbody id="summaryTableBody"></tbody>
         </table></div>
@@ -2479,16 +2552,101 @@ function switchTab(tab) {
 // ══════════════════════════════════════════════════════
 // SUMMARY TAB
 // ══════════════════════════════════════════════════════
-function renderSummaryTab() {
+// ══════════════════════════════════════════════════════
+// SUMMARY FILTER STATE
+// ══════════════════════════════════════════════════════
+let summaryFilter = 'all';
+let summaryFilterMonth = null;
+
+function setSummaryFilter(type) {
+  summaryFilter = type;
+  if (type !== 'month') summaryFilterMonth = null;
+  else {
+    summaryFilterMonth = parseInt(document.getElementById('summaryMonthPicker').value);
+    if (!summaryFilterMonth) { summaryFilter = 'all'; }
+  }
+  // Update active pill
+  document.querySelectorAll('.sum-filter').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === type);
+  });
+  if (type !== 'month') document.getElementById('summaryMonthPicker').value = '';
+  renderSummaryTab();
+}
+
+function getFilteredLogs() {
   const completed = allLogs.filter(l => l.status === 'complete' || l.status === 'signed');
+  const now = new Date();
+  const year = now.getFullYear();
 
-  // KPIs
-  const totalAcres = completed.reduce((s, l) => s + (parseFloat(l.acres) || 0), 0);
-  const totalRecords = completed.length;
+  const filterLabels = {
+    all: 'All Records',
+    year: year + ' — Full Year',
+    season: 'Growing Season (Mar–Nov)',
+    q1: 'Q1 — Jan to Mar',
+    q2: 'Q2 — Apr to Jun',
+    q3: 'Q3 — Jul to Sep',
+    q4: 'Q4 — Oct to Dec',
+    month: ''
+  };
 
-  // Total time in minutes from start/stop times
+  const monthNames = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  const labelEl = document.getElementById('summaryFilterLabel');
+
+  if (summaryFilter === 'all') {
+    if (labelEl) labelEl.textContent = filterLabels.all;
+    return completed;
+  }
+  if (summaryFilter === 'year') {
+    if (labelEl) labelEl.textContent = filterLabels.year;
+    return completed.filter(l => l.application_date && l.application_date.startsWith(year));
+  }
+  if (summaryFilter === 'season') {
+    // Growing season: March (3) through November (11)
+    if (labelEl) labelEl.textContent = filterLabels.season;
+    return completed.filter(l => {
+      if (!l.application_date) return false;
+      const m = parseInt(l.application_date.slice(5, 7));
+      return m >= 3 && m <= 11;
+    });
+  }
+  if (summaryFilter === 'q1') {
+    if (labelEl) labelEl.textContent = filterLabels.q1;
+    return completed.filter(l => { const m = parseInt((l.application_date||'').slice(5,7)); return m >= 1 && m <= 3; });
+  }
+  if (summaryFilter === 'q2') {
+    if (labelEl) labelEl.textContent = filterLabels.q2;
+    return completed.filter(l => { const m = parseInt((l.application_date||'').slice(5,7)); return m >= 4 && m <= 6; });
+  }
+  if (summaryFilter === 'q3') {
+    if (labelEl) labelEl.textContent = filterLabels.q3;
+    return completed.filter(l => { const m = parseInt((l.application_date||'').slice(5,7)); return m >= 7 && m <= 9; });
+  }
+  if (summaryFilter === 'q4') {
+    if (labelEl) labelEl.textContent = filterLabels.q4;
+    return completed.filter(l => { const m = parseInt((l.application_date||'').slice(5,7)); return m >= 10 && m <= 12; });
+  }
+  if (summaryFilter === 'month' && summaryFilterMonth) {
+    if (labelEl) labelEl.textContent = monthNames[summaryFilterMonth] + ' ' + year;
+    return completed.filter(l => {
+      if (!l.application_date) return false;
+      const m = parseInt(l.application_date.slice(5,7));
+      const y = parseInt(l.application_date.slice(0,4));
+      return m === summaryFilterMonth && y === year;
+    });
+  }
+  return completed;
+}
+
+function renderSummaryTab() {
+  const logs = getFilteredLogs();
+  const allCompleted = allLogs.filter(l => l.status === 'complete' || l.status === 'signed');
+
+  // ── CORE METRICS ──
+  const totalAcres = logs.reduce((s, l) => s + (parseFloat(l.acres) || 0), 0);
+  const totalRecords = logs.length;
+
   let totalMins = 0;
-  completed.forEach(l => {
+  logs.forEach(l => {
     if (l.application_time && l.stop_time) {
       const [sh, sm] = l.application_time.split(':').map(Number);
       const [eh, em] = l.stop_time.split(':').map(Number);
@@ -2498,29 +2656,25 @@ function renderSummaryTab() {
   });
   const totalHours = (totalMins / 60).toFixed(1);
   const avgAcresPerHour = totalMins > 0 ? (totalAcres / (totalMins / 60)).toFixed(1) : '—';
+  const totalProducts = logs.reduce((s, l) => s + ((l.products || []).length), 0);
+  const commodities = [...new Set(logs.map(l => l.commodity_applied_to).filter(Boolean))];
+  const totalWater = logs.reduce((s, l) => s + ((parseFloat(l.water_per_acre)||0) * (parseFloat(l.acres)||0)), 0);
 
-  // Products count
-  const totalProducts = completed.reduce((s, l) => s + ((l.products || []).length), 0);
-
-  // Unique commodities
-  const commodities = [...new Set(completed.map(l => l.commodity_applied_to).filter(Boolean))];
-
-  // Current year vs previous year
-  const thisYear = new Date().getFullYear();
-  const thisYearLogs = completed.filter(l => l.application_date && l.application_date.startsWith(thisYear));
-  const lastYearLogs = completed.filter(l => l.application_date && l.application_date.startsWith(thisYear - 1));
-  const thisYearAcres = thisYearLogs.reduce((s, l) => s + (parseFloat(l.acres) || 0), 0);
-  const lastYearAcres = lastYearLogs.reduce((s, l) => s + (parseFloat(l.acres) || 0), 0);
-
-  // Render KPI boxes
+  // ── KPI BOXES ──
   const kpiEl = document.getElementById('summaryKPIs');
+  const thisYear = new Date().getFullYear();
+  const thisYearAcres = allCompleted.filter(l => l.application_date?.startsWith(thisYear))
+    .reduce((s, l) => s + (parseFloat(l.acres)||0), 0);
+
   const kpis = [
     { label: 'Total Records', val: totalRecords, color: 'amber' },
-    { label: 'Acres Sprayed YTD', val: thisYearAcres.toLocaleString() + ' ac', color: 'amber' },
+    { label: 'Acres Sprayed', val: totalAcres > 0 ? totalAcres.toLocaleString() + ' ac' : '—', color: 'amber' },
     { label: 'Total Hours', val: totalHours + ' hr', color: '' },
     { label: 'Avg Acres/Hour', val: avgAcresPerHour, color: '' },
     { label: 'Products Used', val: totalProducts, color: '' },
-    { label: 'Crops Covered', val: commodities.length, color: '' }
+    { label: 'Crops Covered', val: commodities.length, color: '' },
+    { label: 'Total Water Applied', val: totalWater > 0 ? totalWater.toLocaleString() + ' gal' : '—', color: '' },
+    { label: 'YTD Acres (' + thisYear + ')', val: thisYearAcres > 0 ? thisYearAcres.toLocaleString() + ' ac' : '—', color: '' }
   ];
   kpiEl.innerHTML = kpis.map(k =>
     '<div class="r-box ' + k.color + '">' +
@@ -2529,45 +2683,122 @@ function renderSummaryTab() {
     '</div>'
   ).join('');
 
-  // YOY section
+  // ── PERSONAL BESTS (always from all-time data) ──
+  const achEl = document.getElementById('summaryAchievements');
+  if (allCompleted.length > 0) {
+    // Highest acres in a single day
+    const byDay = {};
+    allCompleted.forEach(l => {
+      if (l.application_date) {
+        byDay[l.application_date] = (byDay[l.application_date] || 0) + (parseFloat(l.acres) || 0);
+      }
+    });
+    const bestDayAcres = Math.max(...Object.values(byDay));
+    const bestDay = Object.keys(byDay).find(d => byDay[d] === bestDayAcres);
+
+    // Most fields in a single day
+    const fieldsByDay = {};
+    allCompleted.forEach(l => {
+      if (l.application_date) {
+        if (!fieldsByDay[l.application_date]) fieldsByDay[l.application_date] = new Set();
+        if (l.field_name) fieldsByDay[l.application_date].add(l.field_name);
+      }
+    });
+    const bestFieldDay = Object.keys(fieldsByDay).reduce((a, b) =>
+      fieldsByDay[a].size > fieldsByDay[b].size ? a : b, Object.keys(fieldsByDay)[0]);
+    const mostFields = fieldsByDay[bestFieldDay]?.size || 0;
+
+    // Fastest acres per hour
+    let fastestAcresPerHour = 0;
+    allCompleted.forEach(l => {
+      if (l.application_time && l.stop_time && l.acres) {
+        const [sh, sm] = l.application_time.split(':').map(Number);
+        const [eh, em] = l.stop_time.split(':').map(Number);
+        const hrs = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+        if (hrs > 0) fastestAcresPerHour = Math.max(fastestAcresPerHour, parseFloat(l.acres) / hrs);
+      }
+    });
+
+    // Most water in a single application
+    const mostWater = Math.max(...allCompleted.map(l =>
+      (parseFloat(l.water_per_acre)||0) * (parseFloat(l.acres)||0)));
+
+    // Most products in a single application
+    const mostProducts = Math.max(...allCompleted.map(l => (l.products||[]).length));
+
+    // Earliest start time
+    const starts = allCompleted.filter(l => l.application_time).map(l => l.application_time).sort();
+    const earliestStart = starts[0] || null;
+
+    const achievements = [
+      { icon: '🏆', label: 'Best Day — Acres', val: bestDayAcres.toLocaleString() + ' ac', sub: bestDay || '', gold: true },
+      { icon: '📋', label: 'Most Fields in a Day', val: mostFields + ' fields', sub: bestFieldDay || '', gold: mostFields >= 3 },
+      { icon: '⚡', label: 'Fastest Rate', val: fastestAcresPerHour > 0 ? fastestAcresPerHour.toFixed(0) + ' ac/hr' : '—', sub: 'single application', gold: fastestAcresPerHour > 80 },
+      { icon: '💧', label: 'Most Water Applied', val: mostWater > 0 ? mostWater.toLocaleString() + ' gal' : '—', sub: 'single application', gold: false },
+      { icon: '🧪', label: 'Most Products in Mix', val: mostProducts + ' products', sub: 'single tank mix', gold: mostProducts >= 3 },
+      { icon: '🌅', label: 'Earliest Start', val: earliestStart || '—', sub: 'first spray of day', gold: earliestStart && earliestStart < '06:00' }
+    ];
+
+    achEl.innerHTML = achievements.map(a =>
+      '<div class="achievement-card' + (a.gold ? ' gold' : '') + '">' +
+      '<div class="ach-icon">' + a.icon + '</div>' +
+      '<div>' +
+        '<div class="ach-label">' + a.label + '</div>' +
+        '<div class="ach-val">' + a.val + '</div>' +
+        '<div class="ach-sub">' + a.sub + '</div>' +
+      '</div>' +
+      '</div>'
+    ).join('');
+  } else {
+    achEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Complete records to see your personal bests.</div>';
+  }
+
+  // ── YOY COMPARISON ──
   const yoySection = document.getElementById('yoySection');
-  if (lastYearAcres > 0 || (lastYearLogs.length > 0)) {
+  const lastYearLogs = allCompleted.filter(l => l.application_date?.startsWith(thisYear - 1));
+  const thisYearLogs = allCompleted.filter(l => l.application_date?.startsWith(thisYear));
+  const thisYearAcresYOY = thisYearLogs.reduce((s, l) => s + (parseFloat(l.acres)||0), 0);
+  const lastYearAcres = lastYearLogs.reduce((s, l) => s + (parseFloat(l.acres)||0), 0);
+
+  if (lastYearLogs.length > 0) {
     yoySection.classList.remove('hidden');
-    const acreDiff = thisYearAcres - lastYearAcres;
-    const acrePct = lastYearAcres > 0 ? ((acreDiff / lastYearAcres) * 100).toFixed(0) : '—';
-    const recDiff = thisYearLogs.length - lastYearLogs.length;
+    const acreDiff = thisYearAcresYOY - lastYearAcres;
     const yoyGrid = document.getElementById('yoyGrid');
     yoyGrid.innerHTML = [
-      { label: 'Acres ' + thisYear + ' vs ' + (thisYear-1), curr: thisYearAcres, prev: lastYearAcres, diff: acreDiff, pct: acrePct },
-      { label: 'Records ' + thisYear + ' vs ' + (thisYear-1), curr: thisYearLogs.length, prev: lastYearLogs.length, diff: recDiff, pct: lastYearLogs.length > 0 ? ((recDiff/lastYearLogs.length)*100).toFixed(0) : '—' }
+      { label: 'Acres ' + thisYear + ' vs ' + (thisYear-1), curr: thisYearAcresYOY, prev: lastYearAcres, diff: acreDiff },
+      { label: 'Records ' + thisYear + ' vs ' + (thisYear-1), curr: thisYearLogs.length, prev: lastYearLogs.length, diff: thisYearLogs.length - lastYearLogs.length }
     ].map(row => {
       const up = row.diff > 0;
       const same = row.diff === 0;
-      const color = same ? 'var(--muted)' : up ? 'var(--green-lt)' : 'var(--red-lt)';
+      const color = same ? 'var(--muted)' : up ? 'var(--green)' : 'var(--red)';
       const arrow = same ? '→' : up ? '▲' : '▼';
+      const pct = row.prev > 0 ? ((row.diff / row.prev) * 100).toFixed(0) + '%' : '—';
       return '<div style="background:var(--surface);border:2px solid var(--border-dk);border-radius:6px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">' +
         '<div style="font-family:monospace;font-size:9px;letter-spacing:2px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:6px;">' + row.label + '</div>' +
-        '<div style="font-family:"",sans-serif;font-size:22px;color:var(--ink);">' + row.curr + '</div>' +
-        '<div style="font-family:monospace;font-size:11px;color:' + color + ';margin-top:4px;">' + arrow + ' ' + (row.diff > 0 ? '+' : '') + row.diff + ' vs prev year (' + row.pct + '%)</div>' +
+        '<div style="font-size:22px;font-weight:700;color:var(--ink);">' + row.curr.toLocaleString() + '</div>' +
+        '<div style="font-family:monospace;font-size:11px;color:' + color + ';margin-top:4px;">' + arrow + ' ' + (row.diff > 0 ? '+' : '') + row.diff + ' vs prev (' + pct + ')</div>' +
         '</div>';
     }).join('');
   } else {
     yoySection.classList.add('hidden');
   }
 
-  // Records table
+  // ── RECORDS TABLE ──
   const tbody = document.getElementById('summaryTableBody');
   tbody.innerHTML = '';
-  if (!completed.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">No completed records yet.</td></tr>';
+  if (!logs.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;">No records match the selected filter.</td></tr>';
     return;
   }
-  completed.forEach(log => {
+  logs.forEach(log => {
     const prods = (log.products || []).map(p => p.name).join(', ') || '—';
-    const timeStr = log.application_time && log.stop_time ? log.application_time + '–' + log.stop_time : (log.application_time || '—');
+    const timeStr = log.application_time && log.stop_time
+      ? log.application_time + '–' + log.stop_time
+      : (log.application_time || '—');
     const tr = document.createElement('tr');
     tr.innerHTML =
       '<td style="font-family:monospace;font-size:11px;">' + (log.application_date || '—') + '</td>' +
+      '<td style="font-weight:600;">' + (log.field_name || '—') + '</td>' +
       '<td>' + (log.commodity_applied_to || '—') + '</td>' +
       '<td style="font-family:monospace;">' + (log.acres || '—') + '</td>' +
       '<td style="font-size:11px;max-width:180px;white-space:normal;">' + prods + '</td>' +
@@ -2579,24 +2810,48 @@ function renderSummaryTab() {
   });
 }
 
-function exportSummaryCSV() {
-  const completed = allLogs.filter(l => l.status === 'complete' || l.status === 'signed');
+function buildSummaryCSV(logs) {
   const rows = [['Date','Field Name','Commodity','Acres','Products','EPA Numbers','Pest Controlled','Wind Speed','Wind Dir','Temp','Start Time','Stop Time','Water/Acre','Legal Description','Applicator','Cert #']];
-  completed.forEach(l => {
+  logs.forEach(l => {
     const prods = (l.products||[]).map(p => p.name).join('; ');
     const epas = (l.products||[]).map(p => p.epa_number).filter(Boolean).join('; ');
     rows.push([l.application_date||'',l.field_name||'',l.commodity_applied_to||'',l.acres||'',prods,epas,l.pest_controlled||'',l.wind_speed||'',l.wind_direction||'',l.temperature||'',l.application_time||'',l.stop_time||'',l.water_per_acre||'',l.legal_description||'',l.applicator_name||'',l.applicator_cert_number||'']);
   });
-  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n');
+  return rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n');
+}
+
+function exportSummaryCSV() {
+  const logs = getFilteredLogs();
+  const csv = buildSummaryCSV(logs);
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'SprayLog_Summary_' + new Date().getFullYear() + '.csv';
+  const label = document.getElementById('summaryFilterLabel')?.textContent || 'Summary';
+  a.download = 'SprayLog_' + label.replace(/[^a-zA-Z0-9]/g,'_') + '_' + new Date().getFullYear() + '.csv';
   a.click();
   URL.revokeObjectURL(url);
   toast('CSV exported ✓');
 }
+
+async function uploadSummaryToDrive() {
+  const logs = getFilteredLogs();
+  if (!logs.length) { toast('No records to upload for the selected filter.', 'warn'); return; }
+  try {
+    await initGoogleDriveAPI();
+    const csv = buildSummaryCSV(logs);
+    const label = document.getElementById('summaryFilterLabel')?.textContent || 'Summary';
+    const filename = 'SprayLog_Summary_' + label.replace(/[^a-zA-Z0-9]/g,'_') + '_' + new Date().getFullYear() + '.csv';
+    toast('Uploading summary to Google Drive...');
+    await uploadFileToDrive(filename, csv);
+    toast('✓ Summary saved to Google Drive!');
+  } catch(e) {
+    if (e.message === 'NOT_SIGNED_IN') { openGDriveAuthModal(); }
+    else { toast('Drive upload failed: ' + e.message, 'warn'); }
+  }
+}
+
+
 
 // ══════════════════════════════════════════════════════
 // SHARE / EXPORT
