@@ -3653,8 +3653,26 @@ function formatDate(str) {
 // INIT
 // ══════════════════════════════════════════════════════
 
+// Handle auth events — PASSWORD_RECOVERY fires when hash has type=recovery
+// USER_UPDATED fires after successful password change
+let _inReset = false;
+
 sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    _inReset = true;
+    history.replaceState(null, '', window.location.pathname);
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('feedbackBtn').classList.add('hidden');
+    setAuthTab('newpass');
+    return;
+  }
+  if (event === 'SIGNED_IN' && _inReset) {
+    // Block auto-login during reset flow
+    return;
+  }
   if (event === 'USER_UPDATED' && session?.user) {
+    _inReset = false;
     authMsg('Password updated! Signing you in...', 'success');
     setTimeout(async () => {
       document.getElementById('authScreen').classList.add('hidden');
@@ -3671,29 +3689,11 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
 (async () => {
   try {
-    // Check for password reset redirect — ?reset=1 is appended by doReset()
-    const params = new URLSearchParams(window.location.search);
-    const isReset = params.get('reset') === '1';
-
-    if (isReset) {
-      history.replaceState(null, '', window.location.pathname);
-      const { data } = await sb.auth.getSession();
-      if (data?.session?.user) {
-        document.getElementById('authScreen').classList.remove('hidden');
-        document.getElementById('app').classList.add('hidden');
-        document.getElementById('feedbackBtn').classList.add('hidden');
-        setAuthTab('newpass');
-        return;
-      }
-      authMsg('This reset link has expired. Please request a new one.');
-      setAuthTab('reset');
-      return;
-    }
-
-    // Normal load — restore session
+    // Normal load — restore existing session
+    // onAuthStateChange above handles PASSWORD_RECOVERY from hash
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
-    if (data?.session?.user) {
+    if (data?.session?.user && !_inReset) {
       await bootApp(data.session.user);
     }
   } catch(e) {
