@@ -3652,12 +3652,26 @@ function formatDate(str) {
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
-let _resetMode = false;
+
+// Check hash SYNCHRONOUSLY before any async code runs
+// This is the only reliable way to catch type=recovery before SIGNED_IN fires
+const _hashParams = new URLSearchParams(window.location.hash.slice(1));
+const _isRecoveryHash = _hashParams.get('type') === 'recovery';
+if (_isRecoveryHash) {
+  // Clear hash immediately so it does not persist on refresh
+  history.replaceState(null, '', window.location.pathname);
+  // Show new password form right now — synchronously
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('feedbackBtn').classList.add('hidden');
+  setAuthTab('newpass');
+}
+
+let _resetMode = _isRecoveryHash;
 
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
     _resetMode = true;
-    history.replaceState(null, '', window.location.pathname);
     document.getElementById('authScreen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
     document.getElementById('feedbackBtn').classList.add('hidden');
@@ -3689,23 +3703,11 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
 (async () => {
   try {
+    if (_resetMode) return;
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
     if (!data?.session?.user) return;
-
-    // If ?reset=1 is in URL, this is a password reset — show form, do not boot app
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('reset') === '1') {
-      history.replaceState(null, '', window.location.pathname);
-      _resetMode = true;
-      document.getElementById('authScreen').classList.remove('hidden');
-      document.getElementById('app').classList.add('hidden');
-      document.getElementById('feedbackBtn').classList.add('hidden');
-      setAuthTab('newpass');
-      return;
-    }
-
-    // Normal load — boot the app
+    if (_resetMode) return;
     await bootApp(data.session.user);
   } catch(e) {
     console.error('Boot error:', e);
