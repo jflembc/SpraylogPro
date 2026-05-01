@@ -321,39 +321,221 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 }
 .remove-row-btn:hover{background:var(--red);color:#fff;border-color:var(--red);}
 
-/* ══ SUMMARY FILTER ══ */
+/* ══ SUMMARY PAGE ══ */
+.sum-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sum-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.sum-subtitle {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--orange);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+
+/* Filter bar — horizontal scroll, never wraps */
+.sum-filter-bar {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.sum-filter-scroll {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.sum-filter-scroll::-webkit-scrollbar { display: none; }
 .sum-filter {
-  background: var(--surface-2);
+  background: transparent;
   border: 2px solid var(--border);
   border-radius: 50px;
-  padding: 6px 14px;
+  padding: 7px 16px;
   font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   color: var(--ink-2);
   transition: all .15s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
-.sum-filter:hover { border-color: var(--orange); color: var(--orange); }
+.sum-filter:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-bg); }
 .sum-filter.active { background: var(--orange); border-color: var(--orange); color: #fff; }
+.sum-month-pick {
+  flex-shrink: 0;
+  width: 130px;
+  font-size: 14px;
+  padding: 7px 12px;
+  border-radius: 50px;
+  border: 2px solid var(--border);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
 
-/* ══ ACHIEVEMENT CARDS ══ */
-.achievement-card {
+/* KPI grid — strict 4 columns, uniform sizing */
+.sum-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.sum-kpi {
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px 16px;
+  padding: 18px 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.sum-kpi-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.sum-kpi-val {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+.sum-kpi-val.orange { color: var(--orange); }
+.sum-kpi-val.green { color: var(--green); }
+
+/* Section headings */
+.sum-section-head {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--orange);
+  font-weight: 700;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 14px;
+}
+
+/* Personal bests grid */
+.sum-bests-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.sum-best {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  gap: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  transition: border-color .15s;
 }
-.achievement-card.gold { border-color: #D4AF37; background: #FFFDF0; }
-.achievement-card .ach-icon { font-size: 28px; flex-shrink: 0; }
-.achievement-card .ach-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 3px; }
-.achievement-card .ach-val { font-family: 'IBM Plex Sans', sans-serif; font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.2; }
-.achievement-card .ach-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.sum-best.gold {
+  border-color: #D4A017;
+  background: linear-gradient(135deg, #FFFEF5 0%, #FFF8E0 100%);
+}
+.sum-best-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.sum-best-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.sum-best-val {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.sum-best.gold .sum-best-val { color: #B8860B; }
+.sum-best-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* YOY grid */
+.sum-yoy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.sum-yoy-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.sum-yoy-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.sum-yoy-val {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.sum-yoy-diff {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media(max-width:700px) {
+  .sum-kpi-grid { grid-template-columns: repeat(2,1fr); }
+  .sum-bests-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media(max-width:480px) {
+  .sum-bests-grid { grid-template-columns: 1fr; }
+}
 
 /* ══ FEEDBACK BUTTON ══ */
 #feedbackBtn {
@@ -1288,65 +1470,67 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <!-- ══ SUMMARY TAB ══ -->
     <div id="tab-summary" class="tab-content hidden">
 
-      <!-- HEADER ROW -->
-      <div class="flex-between" style="margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:28px;font-weight:700;color:var(--ink);letter-spacing:-0.5px;">Season Summary</div>
+      <!-- ── HEADER ── -->
+      <div class="sum-header">
+        <div>
+          <div class="sum-title">Season Summary</div>
+          <div class="sum-subtitle" id="summaryFilterLabel">All Records</div>
+        </div>
         <div class="flex-gap">
           <button class="btn btn-outline btn-sm" onclick="exportSummaryCSV()">⬇ CSV</button>
-          <button class="btn btn-sky btn-sm" onclick="uploadSummaryToDrive()">⬆ Save to Drive</button>
+          <button class="btn btn-sky btn-sm" onclick="uploadSummaryToDrive()">⬆ Drive</button>
         </div>
       </div>
 
-      <!-- FILTER BAR -->
-      <div style="background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);font-weight:700;white-space:nowrap;">FILTER BY</span>
-        <div id="summaryFilterBtns" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;">
+      <!-- ── FILTER BAR ── -->
+      <div class="sum-filter-bar">
+        <div class="sum-filter-scroll" id="summaryFilterBtns">
           <button class="sum-filter active" data-filter="all" onclick="setSummaryFilter('all')">All Time</button>
           <button class="sum-filter" data-filter="year" onclick="setSummaryFilter('year')">This Year</button>
-          <button class="sum-filter" data-filter="season" onclick="setSummaryFilter('season')">Growing Season</button>
-          <button class="sum-filter" data-filter="q1" onclick="setSummaryFilter('q1')">Q1 Jan–Mar</button>
-          <button class="sum-filter" data-filter="q2" onclick="setSummaryFilter('q2')">Q2 Apr–Jun</button>
-          <button class="sum-filter" data-filter="q3" onclick="setSummaryFilter('q3')">Q3 Jul–Sep</button>
-          <button class="sum-filter" data-filter="q4" onclick="setSummaryFilter('q4')">Q4 Oct–Dec</button>
+          <button class="sum-filter" data-filter="season" onclick="setSummaryFilter('season')">🌱 Growing Season</button>
+          <button class="sum-filter" data-filter="q1" onclick="setSummaryFilter('q1')">Q1 · Jan–Mar</button>
+          <button class="sum-filter" data-filter="q2" onclick="setSummaryFilter('q2')">Q2 · Apr–Jun</button>
+          <button class="sum-filter" data-filter="q3" onclick="setSummaryFilter('q3')">Q3 · Jul–Sep</button>
+          <button class="sum-filter" data-filter="q4" onclick="setSummaryFilter('q4')">Q4 · Oct–Dec</button>
+          <select id="summaryMonthPicker" onchange="setSummaryFilter('month')" class="sum-month-pick">
+            <option value="">Month...</option>
+            <option value="1">January</option><option value="2">February</option>
+            <option value="3">March</option><option value="4">April</option>
+            <option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option>
+            <option value="9">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
         </div>
-        <!-- Month picker -->
-        <select id="summaryMonthPicker" onchange="setSummaryFilter('month')" style="max-width:140px;font-size:13px;padding:7px 10px;">
-          <option value="">Month...</option>
-          <option value="1">January</option><option value="2">February</option>
-          <option value="3">March</option><option value="4">April</option>
-          <option value="5">May</option><option value="6">June</option>
-          <option value="7">July</option><option value="8">August</option>
-          <option value="9">September</option><option value="10">October</option>
-          <option value="11">November</option><option value="12">December</option>
-        </select>
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--orange);font-weight:700;" id="summaryFilterLabel">All Records</span>
       </div>
 
-      <!-- MAIN KPIs -->
-      <div class="results-grid" id="summaryKPIs" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px;"></div>
+      <!-- ── KPI GRID — always 4 columns, never orphans ── -->
+      <div class="sum-kpi-grid" id="summaryKPIs"></div>
 
-      <!-- ACHIEVEMENT BADGES -->
-      <div style="margin-bottom:16px;">
-        <div class="sec-label">Personal Bests</div>
-        <div id="summaryAchievements" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;"></div>
+      <!-- ── PERSONAL BESTS ── -->
+      <div class="sum-section-head">Personal Bests</div>
+      <div class="sum-bests-grid" id="summaryAchievements"></div>
+
+      <!-- ── YEAR OVER YEAR ── -->
+      <div id="yoySection" class="hidden">
+        <div class="sum-section-head">Year-Over-Year</div>
+        <div class="sum-yoy-grid" id="yoyGrid"></div>
       </div>
 
-      <!-- YOY COMPARISON -->
-      <div id="yoySection" class="card-dark hidden" style="margin-bottom:16px;">
-        <div class="sec-label">Year-Over-Year</div>
-        <div id="yoyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;"></div>
+      <!-- ── RECORDS TABLE ── -->
+      <div class="sum-section-head" style="margin-top:24px;">Completed Records</div>
+      <div class="card-dark" style="padding:0;overflow:hidden;">
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead><tr>
+              <th>Date</th><th>Field</th><th>Commodity</th><th>Acres</th>
+              <th>Products</th><th>Wind</th><th>Temp</th><th>Time</th><th></th>
+            </tr></thead>
+            <tbody id="summaryTableBody"></tbody>
+          </table>
+        </div>
       </div>
 
-      <!-- RECORDS TABLE -->
-      <div class="sec-label">Completed Records</div>
-      <div class="card-dark">
-        <div class="data-table-wrap"><table class="data-table">
-          <thead><tr>
-            <th>Date</th><th>Field</th><th>Commodity</th><th>Acres</th><th>Products</th><th>Wind</th><th>Temp</th><th>Time</th><th>Share</th>
-          </tr></thead>
-          <tbody id="summaryTableBody"></tbody>
-        </table></div>
-      </div>
     </div>
 
   </div><!-- /appMain -->
@@ -2642,7 +2826,7 @@ function renderSummaryTab() {
   const allCompleted = allLogs.filter(l => l.status === 'complete' || l.status === 'signed');
 
   // ── CORE METRICS ──
-  const totalAcres = logs.reduce((s, l) => s + (parseFloat(l.acres) || 0), 0);
+  const totalAcres = logs.reduce((s, l) => s + (parseFloat(l.acres)||0), 0);
   const totalRecords = logs.length;
 
   let totalMins = 0;
@@ -2650,53 +2834,52 @@ function renderSummaryTab() {
     if (l.application_time && l.stop_time) {
       const [sh, sm] = l.application_time.split(':').map(Number);
       const [eh, em] = l.stop_time.split(':').map(Number);
-      const diff = (eh * 60 + em) - (sh * 60 + sm);
+      const diff = (eh*60+em) - (sh*60+sm);
       if (diff > 0) totalMins += diff;
     }
   });
-  const totalHours = (totalMins / 60).toFixed(1);
-  const avgAcresPerHour = totalMins > 0 ? (totalAcres / (totalMins / 60)).toFixed(1) : '—';
-  const totalProducts = logs.reduce((s, l) => s + ((l.products || []).length), 0);
+  const totalHours = (totalMins/60).toFixed(1);
+  const avgAcresPerHour = totalMins > 0 ? (totalAcres/(totalMins/60)).toFixed(1) : '—';
+  const totalProducts = logs.reduce((s,l) => s+((l.products||[]).length), 0);
   const commodities = [...new Set(logs.map(l => l.commodity_applied_to).filter(Boolean))];
-  const totalWater = logs.reduce((s, l) => s + ((parseFloat(l.water_per_acre)||0) * (parseFloat(l.acres)||0)), 0);
+  const totalWater = logs.reduce((s,l) => s+((parseFloat(l.water_per_acre)||0)*(parseFloat(l.acres)||0)), 0);
 
-  // ── KPI BOXES ──
+  // Find most recent year in data (not necessarily current calendar year)
+  const allYears = allCompleted.map(l => l.application_date?.slice(0,4)).filter(Boolean);
+  const latestDataYear = allYears.length ? Math.max(...allYears.map(Number)) : new Date().getFullYear();
+  const ytdAcres = allCompleted
+    .filter(l => l.application_date?.startsWith(latestDataYear))
+    .reduce((s,l) => s+(parseFloat(l.acres)||0), 0);
+
+  // ── KPI GRID — always 8 boxes in 4 columns ──
   const kpiEl = document.getElementById('summaryKPIs');
-  const thisYear = new Date().getFullYear();
-  const thisYearAcres = allCompleted.filter(l => l.application_date?.startsWith(thisYear))
-    .reduce((s, l) => s + (parseFloat(l.acres)||0), 0);
-
   const kpis = [
-    { label: 'Total Records', val: totalRecords, color: 'amber' },
-    { label: 'Acres Sprayed', val: totalAcres > 0 ? totalAcres.toLocaleString() + ' ac' : '—', color: 'amber' },
-    { label: 'Total Hours', val: totalHours + ' hr', color: '' },
-    { label: 'Avg Acres/Hour', val: avgAcresPerHour, color: '' },
-    { label: 'Products Used', val: totalProducts, color: '' },
-    { label: 'Crops Covered', val: commodities.length, color: '' },
-    { label: 'Total Water Applied', val: totalWater > 0 ? totalWater.toLocaleString() + ' gal' : '—', color: '' },
-    { label: 'YTD Acres (' + thisYear + ')', val: thisYearAcres > 0 ? thisYearAcres.toLocaleString() + ' ac' : '—', color: '' }
+    { label: 'Total Records',       val: totalRecords,                                             accent: true },
+    { label: 'Acres Sprayed',       val: totalAcres > 0 ? totalAcres.toLocaleString()+' ac' : '—', accent: true },
+    { label: 'Total Hours',         val: totalHours+' hr',                                         accent: false },
+    { label: 'Avg Acres / Hour',    val: avgAcresPerHour,                                          accent: false },
+    { label: 'Products Used',       val: totalProducts,                                            accent: false },
+    { label: 'Crops Covered',       val: commodities.length,                                       accent: false },
+    { label: 'Total Water Applied', val: totalWater > 0 ? Math.round(totalWater).toLocaleString()+' gal' : '—', accent: false },
+    { label: latestDataYear+' YTD Acres', val: ytdAcres > 0 ? ytdAcres.toLocaleString()+' ac' : '—', accent: false }
   ];
   kpiEl.innerHTML = kpis.map(k =>
-    '<div class="r-box ' + k.color + '">' +
-    '<div class="rl">' + k.label + '</div>' +
-    '<div class="rv">' + k.val + '</div>' +
+    '<div class="sum-kpi">' +
+      '<div class="sum-kpi-label">' + k.label + '</div>' +
+      '<div class="sum-kpi-val' + (k.accent ? ' orange' : '') + '">' + k.val + '</div>' +
     '</div>'
   ).join('');
 
-  // ── PERSONAL BESTS (always from all-time data) ──
+  // ── PERSONAL BESTS — all-time ──
   const achEl = document.getElementById('summaryAchievements');
   if (allCompleted.length > 0) {
-    // Highest acres in a single day
     const byDay = {};
     allCompleted.forEach(l => {
-      if (l.application_date) {
-        byDay[l.application_date] = (byDay[l.application_date] || 0) + (parseFloat(l.acres) || 0);
-      }
+      if (l.application_date) byDay[l.application_date] = (byDay[l.application_date]||0) + (parseFloat(l.acres)||0);
     });
     const bestDayAcres = Math.max(...Object.values(byDay));
-    const bestDay = Object.keys(byDay).find(d => byDay[d] === bestDayAcres);
+    const bestDay = Object.keys(byDay).find(d => byDay[d] === bestDayAcres) || '';
 
-    // Most fields in a single day
     const fieldsByDay = {};
     allCompleted.forEach(l => {
       if (l.application_date) {
@@ -2704,80 +2887,73 @@ function renderSummaryTab() {
         if (l.field_name) fieldsByDay[l.application_date].add(l.field_name);
       }
     });
-    const bestFieldDay = Object.keys(fieldsByDay).reduce((a, b) =>
-      fieldsByDay[a].size > fieldsByDay[b].size ? a : b, Object.keys(fieldsByDay)[0]);
+    const bestFieldDay = Object.keys(fieldsByDay).sort((a,b) => fieldsByDay[b].size - fieldsByDay[a].size)[0] || '';
     const mostFields = fieldsByDay[bestFieldDay]?.size || 0;
 
-    // Fastest acres per hour
-    let fastestAcresPerHour = 0;
+    let fastestAPH = 0;
     allCompleted.forEach(l => {
       if (l.application_time && l.stop_time && l.acres) {
-        const [sh, sm] = l.application_time.split(':').map(Number);
-        const [eh, em] = l.stop_time.split(':').map(Number);
-        const hrs = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
-        if (hrs > 0) fastestAcresPerHour = Math.max(fastestAcresPerHour, parseFloat(l.acres) / hrs);
+        const [sh,sm] = l.application_time.split(':').map(Number);
+        const [eh,em] = l.stop_time.split(':').map(Number);
+        const hrs = ((eh*60+em)-(sh*60+sm))/60;
+        if (hrs > 0) fastestAPH = Math.max(fastestAPH, parseFloat(l.acres)/hrs);
       }
     });
 
-    // Most water in a single application
-    const mostWater = Math.max(...allCompleted.map(l =>
-      (parseFloat(l.water_per_acre)||0) * (parseFloat(l.acres)||0)));
+    const mostWater = Math.max(0, ...allCompleted.map(l => (parseFloat(l.water_per_acre)||0)*(parseFloat(l.acres)||0)));
+    const mostProds = Math.max(0, ...allCompleted.map(l => (l.products||[]).length));
 
-    // Most products in a single application
-    const mostProducts = Math.max(...allCompleted.map(l => (l.products||[]).length));
-
-    // Earliest start time
-    const starts = allCompleted.filter(l => l.application_time).map(l => l.application_time).sort();
+    // Earliest start — strip seconds, show HH:MM only
+    const starts = allCompleted.filter(l => l.application_time).map(l => l.application_time.slice(0,5)).sort();
     const earliestStart = starts[0] || null;
 
-    const achievements = [
-      { icon: '🏆', label: 'Best Day — Acres', val: bestDayAcres.toLocaleString() + ' ac', sub: bestDay || '', gold: true },
-      { icon: '📋', label: 'Most Fields in a Day', val: mostFields + ' fields', sub: bestFieldDay || '', gold: mostFields >= 3 },
-      { icon: '⚡', label: 'Fastest Rate', val: fastestAcresPerHour > 0 ? fastestAcresPerHour.toFixed(0) + ' ac/hr' : '—', sub: 'single application', gold: fastestAcresPerHour > 80 },
-      { icon: '💧', label: 'Most Water Applied', val: mostWater > 0 ? mostWater.toLocaleString() + ' gal' : '—', sub: 'single application', gold: false },
-      { icon: '🧪', label: 'Most Products in Mix', val: mostProducts + ' products', sub: 'single tank mix', gold: mostProducts >= 3 },
-      { icon: '🌅', label: 'Earliest Start', val: earliestStart || '—', sub: 'first spray of day', gold: earliestStart && earliestStart < '06:00' }
+    const bests = [
+      { icon:'🏆', label:'Best Day — Acres',    val: bestDayAcres > 0 ? bestDayAcres.toLocaleString()+' ac' : '—',    sub: bestDay,           gold: true },
+      { icon:'📋', label:'Most Fields in a Day', val: mostFields > 0 ? mostFields+' fields' : '—',                     sub: bestFieldDay,       gold: mostFields >= 3 },
+      { icon:'⚡', label:'Fastest Rate',          val: fastestAPH > 0 ? Math.round(fastestAPH)+' ac/hr' : '—',          sub: 'single application',gold: fastestAPH > 80 },
+      { icon:'💧', label:'Most Water Applied',   val: mostWater > 0 ? Math.round(mostWater).toLocaleString()+' gal':'—',sub: 'single application',gold: false },
+      { icon:'🧪', label:'Most Products in Mix', val: mostProds > 0 ? mostProds+' products' : '—',                     sub: 'single tank mix',  gold: mostProds >= 3 },
+      { icon:'🌅', label:'Earliest Start',        val: earliestStart || '—',                                            sub: 'first spray of day',gold: earliestStart && earliestStart < '06:00' }
     ];
-
-    achEl.innerHTML = achievements.map(a =>
-      '<div class="achievement-card' + (a.gold ? ' gold' : '') + '">' +
-      '<div class="ach-icon">' + a.icon + '</div>' +
-      '<div>' +
-        '<div class="ach-label">' + a.label + '</div>' +
-        '<div class="ach-val">' + a.val + '</div>' +
-        '<div class="ach-sub">' + a.sub + '</div>' +
-      '</div>' +
+    achEl.innerHTML = bests.map(b =>
+      '<div class="sum-best' + (b.gold ? ' gold' : '') + '">' +
+        '<div class="sum-best-icon">' + b.icon + '</div>' +
+        '<div>' +
+          '<div class="sum-best-label">' + b.label + '</div>' +
+          '<div class="sum-best-val">' + b.val + '</div>' +
+          '<div class="sum-best-sub">' + b.sub + '</div>' +
+        '</div>' +
       '</div>'
     ).join('');
   } else {
-    achEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Complete records to see your personal bests.</div>';
+    achEl.innerHTML = '<div style="color:var(--muted);font-size:14px;grid-column:1/-1;padding:12px 0;">Complete records to unlock your personal bests.</div>';
   }
 
-  // ── YOY COMPARISON ──
+  // ── YOY — compare the two most recent years found in data ──
   const yoySection = document.getElementById('yoySection');
-  const lastYearLogs = allCompleted.filter(l => l.application_date?.startsWith(thisYear - 1));
-  const thisYearLogs = allCompleted.filter(l => l.application_date?.startsWith(thisYear));
-  const thisYearAcresYOY = thisYearLogs.reduce((s, l) => s + (parseFloat(l.acres)||0), 0);
-  const lastYearAcres = lastYearLogs.reduce((s, l) => s + (parseFloat(l.acres)||0), 0);
+  const dataYears = [...new Set(allCompleted.map(l => l.application_date?.slice(0,4)).filter(Boolean))].map(Number).sort((a,b) => b-a);
+  if (dataYears.length >= 2) {
+    const yr1 = dataYears[0]; // most recent
+    const yr2 = dataYears[1]; // previous
+    const yr1Logs = allCompleted.filter(l => l.application_date?.startsWith(yr1));
+    const yr2Logs = allCompleted.filter(l => l.application_date?.startsWith(yr2));
+    const yr1Acres = yr1Logs.reduce((s,l) => s+(parseFloat(l.acres)||0), 0);
+    const yr2Acres = yr2Logs.reduce((s,l) => s+(parseFloat(l.acres)||0), 0);
 
-  if (lastYearLogs.length > 0) {
     yoySection.classList.remove('hidden');
-    const acreDiff = thisYearAcresYOY - lastYearAcres;
-    const yoyGrid = document.getElementById('yoyGrid');
-    yoyGrid.innerHTML = [
-      { label: 'Acres ' + thisYear + ' vs ' + (thisYear-1), curr: thisYearAcresYOY, prev: lastYearAcres, diff: acreDiff },
-      { label: 'Records ' + thisYear + ' vs ' + (thisYear-1), curr: thisYearLogs.length, prev: lastYearLogs.length, diff: thisYearLogs.length - lastYearLogs.length }
-    ].map(row => {
-      const up = row.diff > 0;
-      const same = row.diff === 0;
-      const color = same ? 'var(--muted)' : up ? 'var(--green)' : 'var(--red)';
-      const arrow = same ? '→' : up ? '▲' : '▼';
-      const pct = row.prev > 0 ? ((row.diff / row.prev) * 100).toFixed(0) + '%' : '—';
-      return '<div style="background:var(--surface);border:2px solid var(--border-dk);border-radius:6px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">' +
-        '<div style="font-family:monospace;font-size:9px;letter-spacing:2px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:6px;">' + row.label + '</div>' +
-        '<div style="font-size:22px;font-weight:700;color:var(--ink);">' + row.curr.toLocaleString() + '</div>' +
-        '<div style="font-family:monospace;font-size:11px;color:' + color + ';margin-top:4px;">' + arrow + ' ' + (row.diff > 0 ? '+' : '') + row.diff + ' vs prev (' + pct + ')</div>' +
-        '</div>';
+    const rows = [
+      { label: 'Acres — '+yr1+' vs '+yr2, curr: yr1Acres, prev: yr2Acres, diff: yr1Acres-yr2Acres },
+      { label: 'Records — '+yr1+' vs '+yr2, curr: yr1Logs.length, prev: yr2Logs.length, diff: yr1Logs.length-yr2Logs.length }
+    ];
+    document.getElementById('yoyGrid').innerHTML = rows.map(row => {
+      const pct = row.prev > 0 ? Math.abs((row.diff/row.prev)*100).toFixed(0)+'%' : '—';
+      const color = row.diff === 0 ? 'var(--muted)' : row.diff > 0 ? 'var(--green)' : 'var(--red)';
+      const arrow = row.diff === 0 ? '→' : row.diff > 0 ? '▲' : '▼';
+      return '<div class="sum-yoy-card">' +
+        '<div class="sum-yoy-label">' + row.label + '</div>' +
+        '<div class="sum-yoy-val">' + row.curr.toLocaleString() + '</div>' +
+        '<div class="sum-yoy-diff" style="color:'+color+'">' + arrow + ' ' + (row.diff > 0 ? '+' : '') + row.diff + ' (' + pct + ' vs prior year)</div>' +
+      '</div>';
     }).join('');
   } else {
     yoySection.classList.add('hidden');
