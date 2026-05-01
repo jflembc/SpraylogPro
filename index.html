@@ -1013,7 +1013,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;">BUILD 2026.05.01.13</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;">BUILD 2026.05.01.14</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1105,7 +1105,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;">BUILD 2026.05.01.13</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;">BUILD 2026.05.01.14</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
@@ -1238,7 +1238,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="card">
         <div class="sec-label">Application Details</div>
         <div class="form-row c2">
-          <div class="form-group" style="margin:0"><label>Field Name</label><input type="text" id="log_fieldName" placeholder="e.g. North Quarter, Home Place"></div>
+          <div class="form-group" style="margin:0">
+            <label>Field Name</label>
+            <div id="fieldNameComboContainer"></div>
+            <input type="text" id="log_fieldName" placeholder="Or type a field name..." style="margin-top:8px;display:none;" oninput="onManualFieldName()">
+          </div>
           <div class="form-group" style="margin:0"><label>Commodity Applied To</label><input type="text" id="log_commodity" placeholder="e.g. Corn, Soybeans"></div>
         </div>
         <div class="form-row c3">
@@ -1639,8 +1643,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 // ══════════════════════════════════════════════════════
 // SUPABASE INIT
 // ══════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://iqevslgnnkivtjncklvq.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxZXZzbGdubmtpdnRqbmNrbHZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjMyMDAsImV4cCI6MjA4OTg5OTIwMH0.LrfDRFyCQRO4cYZXlz4XfK3Rx-yUPb-xBcnY3-YnwoQ';
+const SUPABASE_URL = 'https://tyttsvngdeitkjttdarp.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dHRzdm5nZGVpdGtqdHRkYXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM0MTMsImV4cCI6MjA5MTg2OTQxM30.whG0Kp-ybQEo4vqhlSCUmjJJT5DKOBLqcNms4ngsYF8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
@@ -1651,6 +1655,7 @@ const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 let currentUser = null;
 let userProfile = null;
 let allChemicals = [];
+let allFields = [];
 let allCustomers = [];
 let allLogs = [];
 let editingLogId = null;
@@ -1839,6 +1844,7 @@ async function bootApp(user) {
     document.getElementById('app').classList.remove('hidden');
     await loadProfile();
     await loadChemicals();
+    await loadFields();
     await loadCustomers();
     await loadLogs();
     // Defer sig pad init — canvas must be visible first
@@ -1977,6 +1983,16 @@ async function loadChemicals() {
   const { data } = await sb.from('chemicals').select('*').order('name');
   allChemicals = data || [];
   renderChemicalsTable();
+}
+
+async function loadFields() {
+  if (!currentUser) return;
+  const { data } = await sb
+    .from('fields')
+    .select('id, name, acres, crop, season, farm_id')
+    .eq('user_id', currentUser.id)
+    .order('name');
+  allFields = data || [];
 }
 
 function renderChemicalsTable() {
@@ -2217,7 +2233,14 @@ function openEditLog(id) {
   switchTab('newlog');
   document.getElementById('logFormTitle').textContent = 'Edit Record';
   // Fill form fields
-  document.getElementById('log_fieldName').value = log.field_name || '';
+  populateFieldCombo();
+  if (log.field_id && combos['fieldNameComboContainer']) {
+    combos['fieldNameComboContainer'].setValue(log.field_id);
+    document.getElementById('log_fieldName').style.display = 'none';
+  } else {
+    document.getElementById('log_fieldName').value = log.field_name || '';
+    document.getElementById('log_fieldName').style.display = '';
+  }
   document.getElementById('log_commodity').value = log.commodity_applied_to || '';
   document.getElementById('log_pest').value = log.pest_controlled || '';
   document.getElementById('log_water').value = log.water_per_acre || '';
@@ -2226,7 +2249,14 @@ function openEditLog(id) {
   document.getElementById('log_stopTime').value = log.stop_time || '';
   document.getElementById('log_acres').value = log.acres || '';
   document.getElementById('log_supplier').value = log.pesticide_supplier || '';
-  document.getElementById('log_fieldName').value = log.field_name || '';
+  populateFieldCombo();
+  if (log.field_id && combos['fieldNameComboContainer']) {
+    combos['fieldNameComboContainer'].setValue(log.field_id);
+    document.getElementById('log_fieldName').style.display = 'none';
+  } else {
+    document.getElementById('log_fieldName').value = log.field_name || '';
+    document.getElementById('log_fieldName').style.display = '';
+  }
   document.getElementById('log_legals').value = log.legal_description || '';
   document.getElementById('log_notification').value = log.notification_name || '';
   document.getElementById('log_windSpeed').value = log.wind_speed || '';
@@ -2242,6 +2272,43 @@ function openEditLog(id) {
 // ══════════════════════════════════════════════════════
 // NEW LOG FORM
 // ══════════════════════════════════════════════════════
+function populateFieldCombo() {
+  const container = document.getElementById('fieldNameComboContainer');
+  if (!container) return;
+  const options = allFields.map(f => ({
+    value: f.id,
+    label: f.name,
+    sub: (f.acres ? f.acres + ' ac' : '') + (f.crop ? ' · ' + f.crop : '') + (f.season ? ' · ' + f.season : ''),
+    acres: f.acres,
+    crop: f.crop
+  }));
+  options.push({ value: '__manual', label: 'Enter field name manually...' });
+  createCombo('fieldNameComboContainer', options, {
+    placeholder: 'Search your fields...',
+    onchange: (value, option) => {
+      if (value === '__manual') {
+        document.getElementById('log_fieldName').style.display = '';
+        document.getElementById('log_fieldName').focus();
+        return;
+      }
+      if (option) {
+        // Auto-fill field name, acres, commodity
+        document.getElementById('log_fieldName').value = option.label;
+        document.getElementById('log_fieldName').style.display = 'none';
+        if (option.acres) document.getElementById('log_acres').value = option.acres;
+        if (option.crop) document.getElementById('log_commodity').value = option.crop;
+      }
+    }
+  });
+}
+
+function onManualFieldName() {
+  // If typing manually, clear the combo selection
+  if (combos['fieldNameComboContainer']) {
+    combos['fieldNameComboContainer'].setValue('__manual');
+  }
+}
+
 function initNewLogForm() {
   editingLogId = null;
   document.getElementById('logFormTitle').textContent = 'New Application Record';
@@ -2257,6 +2324,8 @@ function initNewLogForm() {
     document.getElementById('log_appZip').value = userProfile.zip || '';
     document.getElementById('log_appCert').value = userProfile.cert_number || '';
   }
+  // Populate field combo from KYG fields
+  populateFieldCombo();
   // Auto-fill today's date and current time
   const now = new Date();
   document.getElementById('log_appDate').value = now.toISOString().split('T')[0];
@@ -2469,7 +2538,20 @@ function buildLogPayload(status) {
     applicator_cert_number: document.getElementById('log_appCert').value,
     applicator_signature: sig,
     equipment_used: document.getElementById('log_equipment').value,
-    field_name: document.getElementById('log_fieldName').value,
+    field_name: (() => {
+      const combo = combos['fieldNameComboContainer'];
+      const val = combo?.getValue();
+      if (val && val !== '__manual' && val !== '__custom') {
+        const f = allFields.find(x => x.id === val);
+        if (f) return f.name;
+      }
+      return document.getElementById('log_fieldName').value;
+    })(),
+    field_id: (() => {
+      const combo = combos['fieldNameComboContainer'];
+      const val = combo?.getValue();
+      return (val && val !== '__manual' && val !== '__custom') ? val : null;
+    })(),
     commodity_applied_to: document.getElementById('log_commodity').value,
     pest_controlled: document.getElementById('log_pest').value,
     water_per_acre: parseFloat(document.getElementById('log_water').value)||null,
@@ -2477,7 +2559,20 @@ function buildLogPayload(status) {
     application_time: document.getElementById('log_startTime').value || null,
     stop_time: document.getElementById('log_stopTime').value || null,
     acres: parseFloat(document.getElementById('log_acres').value)||null,
-    field_name: document.getElementById('log_fieldName').value,
+    field_name: (() => {
+      const combo = combos['fieldNameComboContainer'];
+      const val = combo?.getValue();
+      if (val && val !== '__manual' && val !== '__custom') {
+        const f = allFields.find(x => x.id === val);
+        if (f) return f.name;
+      }
+      return document.getElementById('log_fieldName').value;
+    })(),
+    field_id: (() => {
+      const combo = combos['fieldNameComboContainer'];
+      const val = combo?.getValue();
+      return (val && val !== '__manual' && val !== '__custom') ? val : null;
+    })(),
     legal_description: document.getElementById('log_legals').value,
     pesticide_supplier: document.getElementById('log_supplier').value,
     notification_name: document.getElementById('log_notification').value,
