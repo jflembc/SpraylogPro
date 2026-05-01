@@ -3653,52 +3653,41 @@ function formatDate(str) {
 // INIT
 // ══════════════════════════════════════════════════════
 
-(async () => {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    const hashType = hashParams.get('type');
-    const isRecoveryLink = code || hashType === 'recovery';
+// This project uses Supabase implicit flow (not PKCE).
+// Reset links arrive as: spraylogpro.pages.dev/#access_token=...&type=recovery
+// Supabase JS client processes the hash automatically and fires PASSWORD_RECOVERY.
+// We MUST register onAuthStateChange BEFORE calling getSession() so we
+// catch PASSWORD_RECOVERY before SIGNED_IN can boot the app.
 
-    if (isRecoveryLink) {
-      // Mark recovery mode in sessionStorage BEFORE exchanging the code
-      sessionStorage.setItem('slp_recovery', '1');
-      history.replaceState(null, '', window.location.pathname);
+let _recoveryMode = false;
 
-      if (code) {
-        const { error } = await sb.auth.exchangeCodeForSession(code);
-        if (error) {
-          sessionStorage.removeItem('slp_recovery');
-          authMsg('This reset link has expired. Please request a new one.');
-          setAuthTab('reset');
-          return;
-        }
-      }
-
-      // Session is now active — we KEEP it active so updateUser() works.
-      // Just show the new password form instead of booting the app.
-      document.getElementById('authScreen').classList.remove('hidden');
-      document.getElementById('app').classList.add('hidden');
-      document.getElementById('feedbackBtn').classList.add('hidden');
-      setAuthTab('newpass');
-      return;
-    }
-
-    // Normal page load — boot if valid session exists
-    const { data, error } = await sb.auth.getSession();
-    if (error) { console.warn('Session error:', error.message); return; }
-    if (data?.session?.user) {
-      await bootApp(data.session.user);
-    }
-  } catch(e) {
-    console.error('Boot error:', e);
-  }
-})();
-
+// Register listener FIRST — before anything else
 sb.auth.onAuthStateChange(async (event, session) => {
+
+  if (event === 'PASSWORD_RECOVERY') {
+    _recoveryMode = true;
+    // Clear the hash from URL so refresh doesn't re-trigger
+    history.replaceState(null, '', window.location.pathname);
+    // Show new password form — do not boot app
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('feedbackBtn').classList.add('hidden');
+    setAuthTab('newpass');
+    return;
+  }
+
+  if (event === 'SIGNED_IN' && session?.user) {
+    // Block SIGNED_IN from booting the app while in recovery mode
+    if (_recoveryMode) return;
+    // Only boot if app is not already showing
+    if (document.getElementById('app').classList.contains('hidden')) {
+      await bootApp(session.user);
+    }
+    return;
+  }
+
   if (event === 'USER_UPDATED' && session?.user) {
-    sessionStorage.removeItem('slp_recovery');
+    _recoveryMode = false;
     authMsg('Password updated! Signing you in...', 'success');
     setTimeout(async () => {
       document.getElementById('authScreen').classList.add('hidden');
@@ -3706,19 +3695,35 @@ sb.auth.onAuthStateChange(async (event, session) => {
     }, 1000);
     return;
   }
+
   if (event === 'EMAIL_CHANGE' && session?.user) {
     await bootApp(session.user);
     toast('Email address updated successfully.');
     return;
   }
-  // SIGNED_IN fires after exchangeCodeForSession — block if in recovery mode
-  if (event === 'SIGNED_IN' && session?.user) {
-    if (sessionStorage.getItem('slp_recovery') === '1') return;
-    if (document.getElementById('app').classList.contains('hidden')) {
-      await bootApp(session.user);
-    }
+
+  if (event === 'SIGNED_OUT') {
+    // Ensure app is hidden and auth is shown
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('feedbackBtn').classList.add('hidden');
+    return;
   }
 });
+
+// NOW check for existing session — listener is already registered above
+(async () => {
+  try {
+    const { data, error } = await sb.auth.getSession();
+    if (error) { console.warn('Session error:', error.message); return; }
+    // If session exists AND we are not in recovery mode, boot normally
+    if (data?.session?.user && !_recoveryMode) {
+      await bootApp(data.session.user);
+    }
+  } catch(e) {
+    console.error('Boot error:', e);
+  }
+})();
 </script>
 <!-- SHARE MODAL -->
 <div class="modal-overlay hidden" id="shareModal">
