@@ -3689,14 +3689,24 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
 (async () => {
   try {
-    // Small delay so onAuthStateChange can process recovery hash first
-    await new Promise(r => setTimeout(r, 100));
-    if (_resetMode) return;
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
-    if (data?.session?.user && !_resetMode) {
-      await bootApp(data.session.user);
+    if (!data?.session?.user) return;
+
+    // If ?reset=1 is in URL, this is a password reset — show form, do not boot app
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reset') === '1') {
+      history.replaceState(null, '', window.location.pathname);
+      _resetMode = true;
+      document.getElementById('authScreen').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('feedbackBtn').classList.add('hidden');
+      setAuthTab('newpass');
+      return;
     }
+
+    // Normal load — boot the app
+    await bootApp(data.session.user);
   } catch(e) {
     console.error('Boot error:', e);
   }
