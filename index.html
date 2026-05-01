@@ -3652,14 +3652,11 @@ function formatDate(str) {
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
-
-// Handle auth events — PASSWORD_RECOVERY fires when hash has type=recovery
-// USER_UPDATED fires after successful password change
-let _inReset = false;
+let _resetMode = false;
 
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
-    _inReset = true;
+    _resetMode = true;
     history.replaceState(null, '', window.location.pathname);
     document.getElementById('authScreen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
@@ -3667,12 +3664,15 @@ sb.auth.onAuthStateChange(async (event, session) => {
     setAuthTab('newpass');
     return;
   }
-  if (event === 'SIGNED_IN' && _inReset) {
-    // Block auto-login during reset flow
+  if (event === 'SIGNED_IN' && session?.user) {
+    if (_resetMode) return;
+    if (document.getElementById('app').classList.contains('hidden')) {
+      await bootApp(session.user);
+    }
     return;
   }
   if (event === 'USER_UPDATED' && session?.user) {
-    _inReset = false;
+    _resetMode = false;
     authMsg('Password updated! Signing you in...', 'success');
     setTimeout(async () => {
       document.getElementById('authScreen').classList.add('hidden');
@@ -3689,11 +3689,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
 (async () => {
   try {
-    // Normal load — restore existing session
-    // onAuthStateChange above handles PASSWORD_RECOVERY from hash
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
-    if (data?.session?.user && !_inReset) {
+    if (data?.session?.user && !_resetMode) {
       await bootApp(data.session.user);
     }
   } catch(e) {
