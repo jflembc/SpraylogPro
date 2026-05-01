@@ -3653,38 +3653,9 @@ function formatDate(str) {
 // INIT
 // ══════════════════════════════════════════════════════
 
-// Check hash SYNCHRONOUSLY before any async code runs
-// This is the only reliable way to catch type=recovery before SIGNED_IN fires
-const _hashParams = new URLSearchParams(window.location.hash.slice(1));
-const _isRecoveryHash = _hashParams.get('type') === 'recovery';
-if (_isRecoveryHash) {
-  // Clear hash immediately so it does not persist on refresh
-  history.replaceState(null, '', window.location.pathname);
-  // Show new password form right now — synchronously
-  document.getElementById('authScreen').classList.remove('hidden');
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('feedbackBtn').classList.add('hidden');
-  setAuthTab('newpass');
-}
-
-let _resetMode = _isRecoveryHash;
+let _resetMode = false;
 
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'PASSWORD_RECOVERY') {
-    _resetMode = true;
-    document.getElementById('authScreen').classList.remove('hidden');
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('feedbackBtn').classList.add('hidden');
-    setAuthTab('newpass');
-    return;
-  }
-  if (event === 'SIGNED_IN' && session?.user) {
-    if (_resetMode) return;
-    if (document.getElementById('app').classList.contains('hidden')) {
-      await bootApp(session.user);
-    }
-    return;
-  }
   if (event === 'USER_UPDATED' && session?.user) {
     _resetMode = false;
     authMsg('Password updated! Signing you in...', 'success');
@@ -3703,12 +3674,36 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
 (async () => {
   try {
-    if (_resetMode) return;
+    const params = new URLSearchParams(window.location.search);
+    const slpAt = params.get('slp_at');
+    const slpRt = params.get('slp_rt');
+    const slpReset = params.get('slp_reset');
+
+    // Password reset flow — edge function passed tokens as query params
+    if (slpReset === '1' && slpAt) {
+      history.replaceState(null, '', window.location.pathname);
+      _resetMode = true;
+      // Set the session manually so updateUser() works
+      const { error } = await sb.auth.setSession({
+        access_token: slpAt,
+        refresh_token: slpRt ?? ''
+      });
+      if (error) {
+        authMsg('Reset link expired. Please request a new one.');
+        setAuthTab('reset');
+        return;
+      }
+      document.getElementById('authScreen').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('feedbackBtn').classList.add('hidden');
+      setAuthTab('newpass');
+      return;
+    }
+
+    // Normal load
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
-    if (!data?.session?.user) return;
-    if (_resetMode) return;
-    await bootApp(data.session.user);
+    if (data?.session?.user) await bootApp(data.session.user);
   } catch(e) {
     console.error('Boot error:', e);
   }
