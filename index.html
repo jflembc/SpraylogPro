@@ -3642,54 +3642,78 @@ function formatDate(str) {
 // ══════════════════════════════════════════════════════
 // INIT — Check session on load
 // ══════════════════════════════════════════════════════
-// ── AUTH STATE LISTENER — handles recovery links and normal sessions ──
-// Must be registered BEFORE getSession() so it catches PASSWORD_RECOVERY event
+
+// ── Detect recovery link BEFORE any auth listener fires ──
+// Supabase sends tokens in the URL hash as:
+//   #access_token=...&type=recovery  (old PKCE flow)
+//   or as a ?code= query param       (new PKCE flow)
+// We check BOTH before registering any listener.
+const _hash = window.location.hash;
+const _search = window.location.search;
+const _isRecovery = _hash.includes('type=recovery') ||
+                    _search.includes('type=recovery') ||
+                    _hash.includes('type=email_change') ||
+                    _search.includes('type=email_change');
+
+// Flag that blocks SIGNED_IN from booting the app
+let _recoveryMode = _isRecovery;
+
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
-    // User clicked the reset link in their email
-    // Show auth screen with set-new-password form, do NOT boot the app
+    // Fired by Supabase when the reset link is processed
+    _recoveryMode = true;
     document.getElementById('authScreen').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
     document.getElementById('feedbackBtn').classList.add('hidden');
+    // Clear the URL hash so a page refresh doesn't re-trigger this
+    history.replaceState(null, '', window.location.pathname);
     setAuthTab('newpass');
     return;
   }
+
+  if (event === 'SIGNED_IN' && session?.user) {
+    // If we're in recovery mode, SIGNED_IN fires right after PASSWORD_RECOVERY
+    // — block it from booting the app, just keep the new-password screen visible
+    if (_recoveryMode) return;
+    // Normal login — only boot if app isn't already showing
+    if (document.getElementById('app').classList.contains('hidden')) {
+      await bootApp(session.user);
+    }
+    return;
+  }
+
   if (event === 'USER_UPDATED') {
-    // Password or email was just updated — boot normally if session exists
+    // Password was successfully changed
+    _recoveryMode = false;
     if (session?.user) {
-      setAuthTab('login');
       authMsg('Password updated! Signing you in...', 'success');
       setTimeout(async () => {
+        document.getElementById('authScreen').classList.add('hidden');
         await bootApp(session.user);
       }, 1200);
     }
     return;
   }
-  if (event === 'EMAIL_CHANGE') {
-    if (session?.user) {
-      await bootApp(session.user);
-      toast('Email address updated successfully.');
-    }
+
+  if (event === 'EMAIL_CHANGE' && session?.user) {
+    _recoveryMode = false;
+    await bootApp(session.user);
+    toast('Email address updated successfully.');
     return;
-  }
-  // SIGNED_IN fires on normal login — only boot if not already in app
-  if (event === 'SIGNED_IN' && session?.user) {
-    if (document.getElementById('app').classList.contains('hidden')) {
-      await bootApp(session.user);
-    }
   }
 });
 
-// Check for existing session on page load
+// Normal page load — check for existing session
 (async () => {
   try {
+    // If this is a recovery link, let onAuthStateChange handle everything
+    if (_isRecovery) {
+      document.getElementById('authScreen').classList.remove('hidden');
+      // Supabase will process the hash/code and fire PASSWORD_RECOVERY automatically
+      return;
+    }
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
-    // Don't boot here if we have a recovery hash — onAuthStateChange handles it
-    const hash = window.location.hash;
-    if (hash && (hash.includes('type=recovery') || hash.includes('type=email_change'))) {
-      return; // onAuthStateChange will fire with the right event
-    }
     if (data?.session?.user) {
       await bootApp(data.session.user);
     }
