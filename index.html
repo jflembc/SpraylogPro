@@ -3689,6 +3689,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
 (async () => {
   try {
+    // Small delay so onAuthStateChange can process recovery hash first
+    await new Promise(r => setTimeout(r, 100));
+    if (_resetMode) return;
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
     if (data?.session?.user && !_resetMode) {
