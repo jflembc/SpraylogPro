@@ -321,6 +321,71 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 }
 .remove-row-btn:hover{background:var(--red);color:#fff;border-color:var(--red);}
 
+/* ══ FEEDBACK BUTTON ══ */
+#feedbackBtn {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 150;
+  background: var(--orange);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 12px 20px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(242,101,34,.45);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all .2s;
+  user-select: none;
+}
+#feedbackBtn:hover { background: var(--orange-lt); box-shadow: 0 6px 20px rgba(242,101,34,.55); transform: translateY(-1px); }
+#feedbackBtn.minimised {
+  padding: 10px 14px;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  justify-content: center;
+}
+#feedbackBtn.minimised .fb-label { display: none; }
+/* On mobile push it above the bottom nav */
+@media(max-width:600px) {
+  #feedbackBtn { bottom: 76px; right: 14px; }
+}
+
+/* ══ STAR RATING ══ */
+.star-row { display: flex; gap: 6px; margin-bottom: 4px; }
+.star {
+  font-size: 32px;
+  cursor: pointer;
+  color: var(--border);
+  transition: color .1s, transform .1s;
+  line-height: 1;
+}
+.star.lit { color: var(--orange); }
+.star:hover { transform: scale(1.15); }
+
+/* ══ CATEGORY PILLS ══ */
+.cat-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.cat-pill {
+  border: 2px solid var(--border-dk);
+  border-radius: 50px;
+  padding: 8px 18px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--ink-2);
+  transition: all .15s;
+}
+.cat-pill:hover { border-color: var(--orange); color: var(--orange); }
+.cat-pill.selected { background: var(--orange); border-color: var(--orange); color: #fff; }
+
 /* ══ RELEASE NOTES ══ */
 .rn-item{
   display:flex;align-items:flex-start;gap:10px;
@@ -1309,6 +1374,7 @@ async function doLogout() {
   currentUser = null; userProfile = null;
   document.getElementById('app').classList.add('hidden');
   document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('feedbackBtn').classList.add('hidden');
 }
 
 async function bootApp(user) {
@@ -1324,6 +1390,7 @@ async function bootApp(user) {
     checkCertExpiry();
     switchTab('logs');
     setTimeout(checkChangelog, 800);
+    document.getElementById('feedbackBtn').classList.remove('hidden');
   } catch(e) {
     console.error('Boot error:', e);
     switchTab('logs');
@@ -2855,6 +2922,85 @@ async function uploadFileToDrive(filename, content) {
 }
 
 // ══════════════════════════════════════════════════════
+// FEEDBACK
+// ══════════════════════════════════════════════════════
+let feedbackRating = 0;
+let feedbackCategory = '';
+const ratingLabels = { 1:"Needs a lot of work", 2:"Not great", 3:"It's okay", 4:"Pretty good", 5:"Love it!" };
+
+function openFeedback() {
+  feedbackRating = 0;
+  feedbackCategory = '';
+  document.getElementById('feedbackMessage').value = '';
+  document.getElementById('feedbackError').classList.add('hidden');
+  document.getElementById('feedbackSubmitBtn').textContent = 'Send Feedback';
+  document.getElementById('feedbackSubmitBtn').disabled = false;
+  document.getElementById('ratingLabel').textContent = '';
+  // Reset stars
+  document.querySelectorAll('.star').forEach(s => s.classList.remove('lit'));
+  // Reset category pills
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('selected'));
+  document.getElementById('feedbackModal').classList.remove('hidden');
+}
+
+function closeFeedback() {
+  document.getElementById('feedbackModal').classList.add('hidden');
+}
+
+function setRating(val) {
+  feedbackRating = val;
+  document.querySelectorAll('.star').forEach(s => {
+    s.classList.toggle('lit', parseInt(s.dataset.val) <= val);
+  });
+  document.getElementById('ratingLabel').textContent = ratingLabels[val] || '';
+}
+
+function setCategory(cat) {
+  feedbackCategory = cat;
+  document.querySelectorAll('.cat-pill').forEach(p => {
+    p.classList.toggle('selected', p.dataset.cat === cat);
+  });
+}
+
+async function submitFeedback() {
+  const message = document.getElementById('feedbackMessage').value.trim();
+  const errEl = document.getElementById('feedbackError');
+  errEl.classList.add('hidden');
+
+  if (!feedbackRating) { showFeedbackError('Please select a star rating.'); return; }
+  if (!feedbackCategory) { showFeedbackError('Please choose a feedback type.'); return; }
+  if (!message) { showFeedbackError('Please add a message before sending.'); return; }
+
+  const btn = document.getElementById('feedbackSubmitBtn');
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  try {
+    const { error } = await sb.from('feedback').insert({
+      user_id: currentUser?.id || null,
+      user_email: currentUser?.email || null,
+      category: feedbackCategory,
+      rating: feedbackRating,
+      message,
+      app_version: '2025.04.30'
+    });
+    if (error) throw error;
+    closeFeedback();
+    toast('✓ Thanks for your feedback!');
+  } catch(e) {
+    showFeedbackError('Failed to send. Please try again.');
+    btn.textContent = 'Send Feedback';
+    btn.disabled = false;
+  }
+}
+
+function showFeedbackError(msg) {
+  const el = document.getElementById('feedbackError');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════
 // CHANGELOG MODAL — localStorage, no database needed
 // ══════════════════════════════════════════════════════
 const CHANGELOG = {
@@ -2942,6 +3088,71 @@ function formatDate(str) {
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeShareModal()">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- FEEDBACK FLOATING BUTTON -->
+<button id="feedbackBtn" class="hidden" onclick="openFeedback()" title="Send Feedback">
+  <span style="font-size:18px;">💬</span>
+  <span class="fb-label">Feedback</span>
+</button>
+
+<!-- FEEDBACK MODAL -->
+<div class="modal-overlay hidden" id="feedbackModal">
+  <div class="modal" style="max-width:500px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--orange);font-weight:700;margin-bottom:4px;">SPRAYLOG PRO</div>
+        <h2 style="font-family:'IBM Plex Sans',sans-serif;font-size:24px;font-weight:700;color:var(--ink);margin:0;">Send Feedback</h2>
+      </div>
+      <button onclick="closeFeedback()" style="background:transparent;border:none;font-size:24px;cursor:pointer;color:var(--muted);line-height:1;padding:4px;">✕</button>
+    </div>
+
+    <!-- Star Rating -->
+    <div class="form-group">
+      <label>How would you rate SprayLog Pro?</label>
+      <div class="star-row" id="starRow">
+        <span class="star" data-val="1" onclick="setRating(1)">★</span>
+        <span class="star" data-val="2" onclick="setRating(2)">★</span>
+        <span class="star" data-val="3" onclick="setRating(3)">★</span>
+        <span class="star" data-val="4" onclick="setRating(4)">★</span>
+        <span class="star" data-val="5" onclick="setRating(5)">★</span>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);height:16px;" id="ratingLabel"></div>
+    </div>
+
+    <!-- Category -->
+    <div class="form-group">
+      <label>What type of feedback is this?</label>
+      <div class="cat-pills">
+        <button class="cat-pill" data-cat="bug" onclick="setCategory('bug')">🐛 Bug Report</button>
+        <button class="cat-pill" data-cat="feature" onclick="setCategory('feature')">💡 Feature Request</button>
+        <button class="cat-pill" data-cat="general" onclick="setCategory('general')">💬 General</button>
+      </div>
+    </div>
+
+    <!-- Message -->
+    <div class="form-group">
+      <label>Tell us more</label>
+      <textarea id="feedbackMessage" rows="4"
+        placeholder="Describe what happened, what you'd like to see, or share your thoughts..."
+        style="resize:vertical;min-height:100px;"></textarea>
+    </div>
+
+    <!-- Error -->
+    <div id="feedbackError" class="hidden" style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:12px;"></div>
+
+    <!-- Actions -->
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">v2025.04.30</span>
+      <div class="flex-gap">
+        <button class="btn btn-ghost" onclick="closeFeedback()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitFeedback()" id="feedbackSubmitBtn">Send Feedback</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
