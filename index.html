@@ -321,6 +321,25 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 }
 .remove-row-btn:hover{background:var(--red);color:#fff;border-color:var(--red);}
 
+/* ══ RELEASE NOTES ══ */
+.rn-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 12px;border-radius:var(--radius);
+  font-family:'IBM Plex Sans',sans-serif;font-size:var(--text-sm);
+  color:var(--ink);line-height:1.5;
+}
+.rn-item.new{background:#EAF5EC;}
+.rn-item.fix{background:#FDF0F0;}
+.rn-item.improved{background:var(--orange-bg);}
+.rn-badge{
+  font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+  padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:2px;
+}
+.rn-badge.new{background:#2E6B36;color:#fff;}
+.rn-badge.fix{background:#C03030;color:#fff;}
+.rn-badge.improved{background:#F26522;color:#fff;}
+
 /* ══ SEARCHABLE COMBO BOX ══ */
 .combo-wrap{position:relative;width:100%;}
 .combo-input-wrap{position:relative;display:flex;align-items:center;}
@@ -719,7 +738,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="auth-tabs">
         <button class="auth-tab active" onclick="setAuthTab('login')">Sign In</button>
         <button class="auth-tab" onclick="setAuthTab('signup')">Create Account</button>
-        <button class="auth-tab" onclick="setAuthTab('reset')" id="resetTab">Reset Password</button>
       </div>
       <div id="authMsg"></div>
 
@@ -727,28 +745,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div id="loginForm">
         <div class="form-group"><label>Email</label><input type="email" id="li_email" placeholder="you@farm.com"></div>
         <div class="form-group"><label>Password</label><input type="password" id="li_pass" placeholder="••••••••"></div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()" id="loginBtn">Sign In</button>
-        <div style="text-align:center;margin-top:12px;">
-          <button onclick="setAuthTab('reset')" style="background:none;border:none;font-family:inherit;font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Forgot your password?</button>
-        </div>
-      </div>
-
-      <!-- RESET PASSWORD -->
-      <div id="resetForm" class="hidden">
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Enter your email and we'll send a reset link. Check spam if it doesn't arrive within 2 minutes.</p>
-        <div class="form-group"><label>Email</label><input type="email" id="re_email" placeholder="you@farm.com"></div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doReset()" id="resetBtn">Send Reset Link</button>
-        <div style="text-align:center;margin-top:12px;">
-          <button onclick="setAuthTab('login')" style="background:none;border:none;font-family:inherit;font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">← Back to Sign In</button>
-        </div>
-      </div>
-
-      <!-- SET NEW PASSWORD — shown after clicking reset email link -->
-      <div id="newPassForm" class="hidden">
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Enter and confirm your new password.</p>
-        <div class="form-group"><label>New Password</label><input type="password" id="np_pass" placeholder="Min 8 characters"></div>
-        <div class="form-group"><label>Confirm Password</label><input type="password" id="np_pass2" placeholder="Re-enter password"></div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doSetNewPassword()" id="newPassBtn">Set New Password</button>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Sign In</button>
       </div>
 
       <!-- SIGNUP -->
@@ -788,63 +785,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
-<!-- ACCOUNT SETTINGS MODAL -->
-<div class="modal-overlay hidden" id="slAccountSettingsModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px;">
-  <div style="background:#FFFFFF;border-top:4px solid var(--orange);padding:0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.5);">
-
-    <!-- HEADER -->
-    <div style="padding:22px 28px 18px;border-bottom:1px solid var(--border);">
-      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:20px;font-weight:700;color:#1E1E1E;letter-spacing:-0.3px;">Account Settings</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--orange);letter-spacing:2px;text-transform:uppercase;margin-top:3px;">Know Your Ground + SprayLog Pro</div>
-    </div>
-
-    <!-- FEEDBACK MSG -->
-    <div id="slAccountSettingsMsg" style="display:none;padding:12px 28px;font-size:13px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;letter-spacing:0.3px;"></div>
-
-    <!-- CHANGE PASSWORD -->
-    <div style="padding:22px 28px;border-bottom:1px solid var(--border);">
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--orange);margin-bottom:14px;font-weight:600;">Change Password</div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#555;margin-bottom:5px;">Current Password</label>
-        <input type="password" id="slAs_curPass" placeholder="••••••••" style="width:100%;background:#F5F0E8;border:1.5px solid var(--border);padding:10px 13px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#1E1E1E;outline:none;">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#555;margin-bottom:5px;">New Password</label>
-        <input type="password" id="slAs_newPass" placeholder="Min 8 characters" style="width:100%;background:#F5F0E8;border:1.5px solid var(--border);padding:10px 13px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#1E1E1E;outline:none;">
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#555;margin-bottom:5px;">Confirm New Password</label>
-        <input type="password" id="slAs_newPass2" placeholder="Re-enter new password" style="width:100%;background:#F5F0E8;border:1.5px solid var(--border);padding:10px 13px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#1E1E1E;outline:none;">
-      </div>
-      <button id="slChangePassBtn" onclick="doSlChangePassword()" style="background:var(--orange);border:none;color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:10px 20px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Update Password</button>
-    </div>
-
-    <!-- CHANGE EMAIL -->
-    <div style="padding:22px 28px;border-bottom:1px solid var(--border);">
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--orange);margin-bottom:14px;font-weight:600;">Change Email Address</div>
-      <div style="margin-bottom:8px;">
-        <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#555;margin-bottom:5px;">New Email Address</label>
-        <input type="email" id="slAs_email" placeholder="new@example.com" style="width:100%;background:#F5F0E8;border:1.5px solid var(--border);padding:10px 13px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#1E1E1E;outline:none;">
-      </div>
-      <p style="font-size:13px;color:#7A7A7A;margin-bottom:14px;line-height:1.5;">A confirmation link will be sent to the new address before the change takes effect.</p>
-      <button id="slChangeEmailBtn" onclick="doSlChangeEmail()" style="background:var(--orange);border:none;color:#fff;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:10px 20px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Update Email</button>
-    </div>
-
-    <!-- DANGER ZONE -->
-    <div style="padding:22px 28px;background:#FFF8F8;border-bottom:1px solid var(--border);">
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#C03030;margin-bottom:10px;font-weight:600;">Danger Zone</div>
-      <p style="font-size:13px;color:#555;margin-bottom:14px;line-height:1.5;">Permanently deletes your account and all spray records. This cannot be undone. Export your data first.</p>
-      <button onclick="doSlDeleteAccount()" style="background:transparent;border:2px solid #C03030;color:#C03030;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:700;padding:9px 18px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Delete My Account</button>
-    </div>
-
-    <!-- FOOTER -->
-    <div style="padding:16px 28px;display:flex;justify-content:flex-end;background:#FAFAF8;">
-      <button onclick="closeAccountSettings()" style="background:transparent;border:1.5px solid var(--border);color:#555;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;padding:9px 20px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Close</button>
-    </div>
-
-  </div>
-</div>
-
 <!-- ════════ APP ════════ -->
 <div id="app" class="hidden">
 
@@ -876,7 +816,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </nav>
     <div class="hdr-right">
       <span class="mode-badge mode-own" id="modeBadge" onclick="toggleMode()">Own Farm</span>
-      <button class="user-btn" onclick="openAccountSettings()" style="border-color:var(--border);color:var(--muted);">⚙</button>
       <button class="user-btn" onclick="doLogout()" id="userBtn">Sign Out</button>
     </div>
   </div>
@@ -997,14 +936,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="card">
         <div class="sec-label">Application Details</div>
         <div class="form-row c2">
-          <div class="form-group" style="margin:0">
-            <label>Field <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);font-weight:400;text-transform:none;">— from Know Your Ground</span></label>
-            <select id="log_fieldSelect" onchange="onFieldSelect(this.value)" style="width:100%;">
-              <option value="">— Select Field —</option>
-            </select>
-            <input type="hidden" id="log_fieldName" value="">
-            <input type="hidden" id="log_fieldId" value="">
-          </div>
+          <div class="form-group" style="margin:0"><label>Field Name</label><input type="text" id="log_fieldName" placeholder="e.g. North Quarter, Home Place"></div>
           <div class="form-group" style="margin:0"><label>Commodity Applied To</label><input type="text" id="log_commodity" placeholder="e.g. Corn, Soybeans"></div>
         </div>
         <div class="form-row c3">
@@ -1289,121 +1221,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 // ══════════════════════════════════════════════════════
 // SUPABASE INIT
 // ══════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://tyttsvngdeitkjttdarp.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dHRzdm5nZGVpdGtqdHRkYXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM0MTMsImV4cCI6MjA5MTg2OTQxM30.whG0Kp-ybQEo4vqhlSCUmjJJT5DKOBLqcNms4ngsYF8';
+const SUPABASE_URL = 'https://iqevslgnnkivtjncklvq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlxZXZzbGdubmtpdnRqbmNrbHZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjMyMDAsImV4cCI6MjA4OTg5OTIwMH0.LrfDRFyCQRO4cYZXlz4XfK3Rx-yUPb-xBcnY3-YnwoQ';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ── KYG FIELDS INTEGRATION ──
-let kygFields = []; // cached fields from Know Your Ground
-
-async function loadKYGFields() {
-  if (!currentUser) return;
-  const { data, error } = await sb
-    .from('fields')
-    .select('id, name, acres, legals, crop, season, farm_id')
-    .eq('user_id', currentUser.id)
-    .order('name');
-  if (error) { console.warn('Could not load KYG fields:', error.message); return; }
-  kygFields = data || [];
-  populateFieldDropdown();
-}
-
-function populateFieldDropdown() {
-  const sel = document.getElementById('log_fieldSelect');
-  if (!sel) return;
-  // Save current value
-  const current = document.getElementById('log_fieldId')?.value;
-  // Rebuild options
-  sel.innerHTML = '<option value="">— Select Field —</option>';
-  if (kygFields.length === 0) {
-    const opt = document.createElement('option');
-    opt.value = '__manual__';
-    opt.textContent = '(No fields in Know Your Ground yet — enter manually)';
-    sel.appendChild(opt);
-  } else {
-    // Group by season if multiple seasons exist
-    const seasons = [...new Set(kygFields.map(f => f.season).filter(Boolean))].sort().reverse();
-    if (seasons.length > 1) {
-      seasons.forEach(season => {
-        const group = document.createElement('optgroup');
-        group.label = season + ' Season';
-        kygFields.filter(f => f.season === season).forEach(f => {
-          const opt = document.createElement('option');
-          opt.value = f.id;
-          opt.dataset.name = f.name;
-          opt.dataset.acres = f.acres || '';
-          opt.dataset.legals = f.legals || '';
-          opt.dataset.crop = f.crop || '';
-          opt.textContent = f.name + (f.acres ? ' — ' + f.acres + ' ac' : '') + (f.crop ? ' · ' + f.crop : '');
-          group.appendChild(opt);
-        });
-        sel.appendChild(group);
-      });
-    } else {
-      kygFields.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f.id;
-        opt.dataset.name = f.name;
-        opt.dataset.acres = f.acres || '';
-        opt.dataset.legals = f.legals || '';
-        opt.dataset.crop = f.crop || '';
-        opt.textContent = f.name + (f.acres ? ' — ' + f.acres + ' ac' : '') + (f.crop ? ' · ' + f.crop : '');
-        sel.appendChild(opt);
-      });
-    }
-    // Re-add manual entry option at bottom
-    const manualGroup = document.createElement('optgroup');
-    manualGroup.label = '─────────────';
-    const manualOpt = document.createElement('option');
-    manualOpt.value = '__manual__';
-    manualOpt.textContent = '+ Enter field manually';
-    manualGroup.appendChild(manualOpt);
-    sel.appendChild(manualGroup);
-  }
-  // Restore selection
-  if (current) sel.value = current;
-}
-
-function onFieldSelect(val) {
-  const nameHidden = document.getElementById('log_fieldName');
-  const idHidden = document.getElementById('log_fieldId');
-  if (val === '__manual__' || !val) {
-    // Show a text input inline for manual entry
-    showManualFieldInput();
-    if (idHidden) idHidden.value = '';
-    return;
-  }
-  hideManualFieldInput();
-  const field = kygFields.find(f => f.id === val);
-  if (!field) return;
-  // Set hidden values
-  if (nameHidden) nameHidden.value = field.name;
-  if (idHidden) idHidden.value = field.id;
-  // Auto-fill related fields
-  const acresEl = document.getElementById('log_acres');
-  const legalsEl = document.getElementById('log_legals');
-  const commodityEl = document.getElementById('log_commodity');
-  if (acresEl && field.acres) acresEl.value = field.acres;
-  if (legalsEl && field.legals) legalsEl.value = field.legals;
-  if (commodityEl && field.crop && !commodityEl.value) commodityEl.value = field.crop;
-}
-
-function showManualFieldInput() {
-  let manual = document.getElementById('log_fieldNameManual');
-  if (!manual) {
-    const wrap = document.createElement('div');
-    wrap.id = 'manualFieldWrap';
-    wrap.style.marginTop = '8px';
-    wrap.innerHTML = '<input type="text" id="log_fieldNameManual" placeholder="Enter field name manually" style="width:100%;" oninput="document.getElementById(\'log_fieldName\').value=this.value">';
-    document.getElementById('log_fieldSelect').parentNode.appendChild(wrap);
-  }
-  document.getElementById('manualFieldWrap').style.display = 'block';
-}
-
-function hideManualFieldInput() {
-  const wrap = document.getElementById('manualFieldWrap');
-  if (wrap) wrap.style.display = 'none';
-}
 
 const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 
@@ -1424,14 +1244,9 @@ let productRowCount = 0;
 // AUTH
 // ══════════════════════════════════════════════════════
 function setAuthTab(tab) {
-  const panels = ['loginForm','signupForm','resetForm','newPassForm'];
-  panels.forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.classList.toggle('hidden', id !== tab+'Form');
-  });
-  document.querySelectorAll('.auth-tab').forEach((t,i) => {
-    t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')||(i===2&&tab==='reset'));
-  });
+  document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='signup')));
   document.getElementById('authMsg').innerHTML = '';
 }
 
@@ -1494,132 +1309,6 @@ async function doLogout() {
   currentUser = null; userProfile = null;
   document.getElementById('app').classList.add('hidden');
   document.getElementById('authScreen').classList.remove('hidden');
-  setAuthTab('login');
-}
-
-async function doReset() {
-  const email = document.getElementById('re_email').value.trim();
-  if(!email){authMsg('Please enter your email address.');return;}
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){authMsg('Please enter a valid email address.');return;}
-  const btn=document.getElementById('resetBtn');btn.disabled=true;btn.textContent='Sending...';
-  try{
-    const {error}=await sb.auth.resetPasswordForEmail(email);
-    if(error)throw error;
-    authMsg('If an account exists for '+email+', a reset link has been sent. Check your inbox and spam folder.','success');
-  }catch(e){authMsg(e.message||'Could not send reset email. Please try again.');}
-  btn.disabled=false;btn.textContent='Send Reset Link';
-}
-
-// ─── URL HASH CALLBACK HANDLER ───
-function handleAuthCallback(){
-  const hash=window.location.hash;
-  if(!hash||!hash.includes('access_token'))return false;
-  const params=new URLSearchParams(hash.replace('#',''));
-  const token=params.get('access_token');
-  const type=params.get('type');
-  if(!token)return false;
-  window.history.replaceState(null,'',window.location.pathname);
-  if(type==='recovery'){
-    window._recoveryToken=token;
-    // Show new password form
-    document.querySelectorAll('.auth-tab').forEach(b=>b.style.display='none');
-    ['loginForm','signupForm','resetForm'].forEach(id=>{
-      const el=document.getElementById(id);if(el)el.classList.add('hidden');
-    });
-    document.getElementById('newPassForm').classList.remove('hidden');
-    authMsg('Enter your new password below.','success');
-    return true;
-  }
-  if(type==='signup'||type==='email_confirmation'){
-    // Auto sign in after email confirmation
-    sb.auth.setSession({access_token:token,refresh_token:params.get('refresh_token')||''})
-      .then(({data})=>{
-        if(data?.user)bootApp(data.user);
-      }).catch(()=>{});
-    return true;
-  }
-  return false;
-}
-
-async function doSetNewPassword(){
-  const pw=document.getElementById('np_pass').value;
-  const pw2=document.getElementById('np_pass2').value;
-  if(!pw||pw.length<8){authMsg('Password must be at least 8 characters.');return;}
-  if(pw!==pw2){authMsg('Passwords do not match.');return;}
-  const btn=document.getElementById('newPassBtn');btn.disabled=true;btn.textContent='Saving...';
-  try{
-    const token=window._recoveryToken;
-    if(!token){authMsg('Reset session expired. Please request a new reset link.');btn.disabled=false;btn.textContent='Set New Password';return;}
-    const {error}=await sb.auth.updateUser({password:pw});
-    if(error)throw error;
-    window._recoveryToken=null;
-    document.querySelectorAll('.auth-tab').forEach(b=>b.style.display='');
-    document.getElementById('newPassForm').classList.add('hidden');
-    setAuthTab('login');
-    authMsg('Password updated successfully. You can now sign in.','success');
-  }catch(e){authMsg(e.message||'Could not update password.');}
-  btn.disabled=false;btn.textContent='Set New Password';
-}
-
-// ─── ACCOUNT SETTINGS (Change Password / Email / Delete) ───
-function openAccountSettings(){
-  document.getElementById('slAs_curPass').value='';
-  document.getElementById('slAs_newPass').value='';
-  document.getElementById('slAs_newPass2').value='';
-  document.getElementById('slAs_email').value='';
-  document.getElementById('slAccountSettingsMsg').style.display='none';
-  document.getElementById('slAccountSettingsModal').classList.remove('hidden');
-}
-function closeAccountSettings(){document.getElementById('slAccountSettingsModal').classList.add('hidden');}
-function showSlSettingsMsg(msg,isError=false){
-  const el=document.getElementById('slAccountSettingsMsg');
-  el.textContent=msg;
-  el.style.display='block';
-  el.style.color=isError?'#C03030':'#2E6B36';
-  el.style.background=isError?'#FFF0F0':'#EAF5EC';
-  el.style.borderLeft='4px solid '+(isError?'#C03030':'#2E6B36');
-}
-async function doSlChangePassword(){
-  const cur=document.getElementById('slAs_curPass').value;
-  const nw=document.getElementById('slAs_newPass').value;
-  const nw2=document.getElementById('slAs_newPass2').value;
-  if(!cur){showSlSettingsMsg('Enter your current password.',true);return;}
-  if(!nw||nw.length<8){showSlSettingsMsg('New password must be at least 8 characters.',true);return;}
-  if(nw!==nw2){showSlSettingsMsg('Passwords do not match.',true);return;}
-  const btn=document.getElementById('slChangePassBtn');btn.disabled=true;btn.textContent='Updating...';
-  try{
-    const {error:signInErr}=await sb.auth.signInWithPassword({email:currentUser.email,password:cur});
-    if(signInErr)throw new Error('Current password is incorrect.');
-    const {error}=await sb.auth.updateUser({password:nw});
-    if(error)throw error;
-    showSlSettingsMsg('Password updated successfully.');
-    document.getElementById('slAs_curPass').value='';
-    document.getElementById('slAs_newPass').value='';
-    document.getElementById('slAs_newPass2').value='';
-  }catch(e){showSlSettingsMsg(e.message,true);}
-  btn.disabled=false;btn.textContent='Update Password';
-}
-async function doSlChangeEmail(){
-  const email=document.getElementById('slAs_email').value.trim();
-  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showSlSettingsMsg('Enter a valid email address.',true);return;}
-  const btn=document.getElementById('slChangeEmailBtn');btn.disabled=true;btn.textContent='Sending...';
-  try{
-    const {error}=await sb.auth.updateUser({email});
-    if(error)throw error;
-    showSlSettingsMsg('Confirmation sent to '+email+'. Click the link to confirm the change.');
-    document.getElementById('slAs_email').value='';
-  }catch(e){showSlSettingsMsg(e.message,true);}
-  btn.disabled=false;btn.textContent='Update Email';
-}
-async function doSlDeleteAccount(){
-  if(!confirm('This permanently deletes your account and all spray records. This CANNOT be undone.\n\nAre you sure?'))return;
-  if(!confirm('Final confirmation — delete everything?'))return;
-  try{
-    await sb.from('spray_logs').delete().eq('owner_id',currentUser.id);
-    await sb.from('customers').delete().eq('owner_id',currentUser.id);
-    await doLogout();
-    alert('Account deleted. Contact support@knowyourground.com if you need help.');
-  }catch(e){showSlSettingsMsg('Error: '+e.message+'. Contact support@knowyourground.com.',true);}
 }
 
 async function bootApp(user) {
@@ -1630,10 +1319,11 @@ async function bootApp(user) {
     await loadProfile();
     await loadChemicals();
     await loadCustomers();
-    await loadKYGFields(); // Load fields from Know Your Ground
     await loadLogs();
+    // Defer sig pad init — canvas must be visible first
     checkCertExpiry();
     switchTab('logs');
+    setTimeout(checkChangelog, 800);
   } catch(e) {
     console.error('Boot error:', e);
     switchTab('logs');
@@ -2000,22 +1690,8 @@ function openEditLog(id) {
   editingLogId = id;
   switchTab('newlog');
   document.getElementById('logFormTitle').textContent = 'Edit Record';
-  // Restore field selection — use field_id if available, else match by name
-  const fieldSel = document.getElementById('log_fieldSelect');
-  const fieldIdHidden = document.getElementById('log_fieldId');
-  if (log.field_id && fieldSel) {
-    fieldSel.value = log.field_id;
-    if (fieldIdHidden) fieldIdHidden.value = log.field_id;
-    document.getElementById('log_fieldName').value = log.field_name || '';
-    hideManualFieldInput();
-  } else if (log.field_name) {
-    // Legacy record with no field_id — show manual input
-    if (fieldSel) fieldSel.value = '__manual__';
-    document.getElementById('log_fieldName').value = log.field_name || '';
-    showManualFieldInput();
-    const manualEl = document.getElementById('log_fieldNameManual');
-    if (manualEl) manualEl.value = log.field_name || '';
-  }
+  // Fill form fields
+  document.getElementById('log_fieldName').value = log.field_name || '';
   document.getElementById('log_commodity').value = log.commodity_applied_to || '';
   document.getElementById('log_pest').value = log.pest_controlled || '';
   document.getElementById('log_water').value = log.water_per_acre || '';
@@ -2024,6 +1700,7 @@ function openEditLog(id) {
   document.getElementById('log_stopTime').value = log.stop_time || '';
   document.getElementById('log_acres').value = log.acres || '';
   document.getElementById('log_supplier').value = log.pesticide_supplier || '';
+  document.getElementById('log_fieldName').value = log.field_name || '';
   document.getElementById('log_legals').value = log.legal_description || '';
   document.getElementById('log_notification').value = log.notification_name || '';
   document.getElementById('log_windSpeed').value = log.wind_speed || '';
@@ -2058,16 +1735,8 @@ function initNewLogForm() {
   const now = new Date();
   document.getElementById('log_appDate').value = now.toISOString().split('T')[0];
   document.getElementById('log_startTime').value = now.toTimeString().slice(0,5);
-  // Clear field selection
-  const fieldSel = document.getElementById('log_fieldSelect');
-  const fieldIdHidden = document.getElementById('log_fieldId');
-  const fieldNameHidden = document.getElementById('log_fieldName');
-  if (fieldSel) fieldSel.value = '';
-  if (fieldIdHidden) fieldIdHidden.value = '';
-  if (fieldNameHidden) fieldNameHidden.value = '';
-  hideManualFieldInput();
   // Clear other fields
-  ['log_commodity','log_pest','log_water','log_stopTime','log_acres','log_supplier','log_legals','log_notification','log_windSpeed','log_temp','log_fieldNotes'].forEach(id => {
+  ['log_fieldName','log_commodity','log_pest','log_water','log_stopTime','log_acres','log_supplier','log_legals','log_notification','log_windSpeed','log_temp','log_fieldNotes'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
   document.getElementById('log_windDir').value = '';
@@ -2265,7 +1934,6 @@ function buildLogPayload(status) {
   return {
     owner_id: currentUser.id,
     customer_id: combos['customerComboContainer']?.getValue() || null,
-    field_id: document.getElementById('log_fieldId')?.value || null,
     is_own_farm: (userProfile?.mode !== 'custom_applicator'),
     applicator_name: document.getElementById('log_appName').value,
     applicator_address: document.getElementById('log_appAddr').value,
@@ -3187,6 +2855,57 @@ async function uploadFileToDrive(filename, content) {
 }
 
 // ══════════════════════════════════════════════════════
+// CHANGELOG MODAL — localStorage, no database needed
+// ══════════════════════════════════════════════════════
+const CHANGELOG = {
+  version: '2025.04.30',
+  title: 'Searchable Chemicals, Google Drive & Brand Refresh',
+  date: 'April 30, 2025',
+  items: [
+    { type: 'new',      text: 'Chemicals dropdown is now searchable — type any part of a product name to filter instantly' },
+    { type: 'new',      text: 'Google Drive integration — select one or multiple records and upload directly to your Drive' },
+    { type: 'new',      text: 'Field Name added to every application record and included in all exports' },
+    { type: 'new',      text: 'Changelog — you will now see a summary of updates on each login' },
+    { type: 'improved', text: 'Full brand refresh with new SprayLog Pro logo, charcoal and orange color palette' },
+    { type: 'improved', text: 'Light theme throughout the app for better readability in bright outdoor conditions' },
+    { type: 'improved', text: 'Larger text, bigger inputs, and improved touch targets for easier use in the field' },
+    { type: 'improved', text: 'Single-page print and PDF output — application records now fit on one page' },
+    { type: 'improved', text: 'File naming now follows Field Name + Legal Description + Date + Commodity format' },
+    { type: 'fix',      text: 'Fixed login confirmation email redirect — new users can sign in immediately after confirming' },
+    { type: 'fix',      text: 'Fixed EPA number not populating when selecting a chemical product' },
+    { type: 'fix',      text: 'Fixed record checkboxes not showing when selecting records for Google Drive upload' }
+  ]
+};
+
+function checkChangelog() {
+  const seen = localStorage.getItem('spraylog_changelog_seen');
+  if (seen === CHANGELOG.version) return;
+  showReleaseModal(CHANGELOG);
+}
+
+function showReleaseModal(release) {
+  document.getElementById('releaseTitle').textContent = release.title;
+  document.getElementById('releaseVersion').textContent = 'Released ' + release.date;
+  document.getElementById('releaseVersionBadge').textContent = release.version;
+
+  const labels = { new: 'New', fix: 'Fix', improved: 'Improved' };
+  document.getElementById('releaseItems').innerHTML = release.items.map(item =>
+    '<div class="rn-item ' + item.type + '">' +
+      '<span class="rn-badge ' + item.type + '">' + (labels[item.type] || item.type) + '</span>' +
+      '<span>' + item.text + '</span>' +
+    '</div>'
+  ).join('');
+
+  document.getElementById('releaseModal').classList.remove('hidden');
+  // Mark seen immediately — modal showing is enough
+  localStorage.setItem('spraylog_changelog_seen', release.version);
+}
+
+function closeReleaseModal() {
+  document.getElementById('releaseModal').classList.add('hidden');
+}
+
+// ══════════════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════════════
 function formatDate(str) {
@@ -3199,8 +2918,6 @@ function formatDate(str) {
 // ══════════════════════════════════════════════════════
 (async () => {
   try {
-    // Handle email link callbacks first (password reset, email confirmation)
-    if(handleAuthCallback()) return;
     const { data, error } = await sb.auth.getSession();
     if (error) { console.warn('Session error:', error.message); return; }
     if (data && data.session && data.session.user) {
@@ -3224,6 +2941,26 @@ function formatDate(str) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeShareModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- RELEASE NOTES MODAL -->
+<div class="modal-overlay hidden" id="releaseModal">
+  <div class="modal" style="max-width:540px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--orange);font-weight:700;margin-bottom:4px;">WHAT'S NEW</div>
+        <h2 id="releaseTitle" style="font-family:'IBM Plex Sans',sans-serif;font-size:24px;font-weight:700;color:var(--ink);margin-bottom:0;">Update</h2>
+        <div id="releaseVersion" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+      <div style="background:var(--orange);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;padding:6px 12px;border-radius:4px;letter-spacing:1px;white-space:nowrap;margin-top:4px;" id="releaseVersionBadge">v1.0</div>
+    </div>
+    <hr style="border:none;border-top:2px solid var(--border);margin:14px 0;">
+    <div id="releaseItems" style="display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;padding-right:4px;"></div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:18px 0 14px;">
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="btn btn-primary" onclick="closeReleaseModal()" style="min-width:140px;">Got It</button>
     </div>
   </div>
 </div>
