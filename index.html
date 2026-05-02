@@ -961,6 +961,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   .r-box .rv{font-size:26px;}
   .r-box .rl{font-size:10px;}
 
+  /* Signature canvas — ensure touch works on mobile */
+  #profileSigCanvas {
+    width: 100% !important;
+    height: 160px !important;
+    touch-action: none !important;
+    display: block;
+  }
   /* Signature canvas full width */
   #sigCanvas{height:120px !important;}
   #fieldMapCanvas{height:160px !important;}
@@ -1013,7 +1020,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;">BUILD 2026.05.01.14</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;">BUILD 2026.05.01.16</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1105,12 +1112,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;">BUILD 2026.05.01.14</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;">BUILD 2026.05.01.16</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
-      <button class="nav-tab active" data-tab="logs" onclick="switchTab('logs')">Records</button>
-      <button class="nav-tab" data-tab="newlog" onclick="switchTab('newlog')">+ New Record</button>
+      <button class="nav-tab active" data-tab="newlog" onclick="switchTab('newlog')">+ New Record</button>
+      <button class="nav-tab" data-tab="logs" onclick="switchTab('logs')">Records</button>
       <button class="nav-tab" data-tab="customers" onclick="switchTab('customers')" id="customersTab">Customers</button>
       <button class="nav-tab" data-tab="chemicals" onclick="switchTab('chemicals')">Chemicals</button>
       <button class="nav-tab" data-tab="summary" onclick="switchTab('summary')">Summary</button>
@@ -1125,11 +1132,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <!-- MOBILE BOTTOM NAV -->
   <div id="mobileNav">
     <div class="mob-nav-inner">
-      <button class="mob-tab active" data-mob="logs" onclick="switchTab('logs')">
-        <span class="mob-icon">📋</span>Records
-      </button>
       <button class="mob-tab" data-mob="newlog" onclick="switchTab('newlog')">
         <span class="mob-icon">➕</span>New
+      </button>
+      <button class="mob-tab active" data-mob="logs" onclick="switchTab('logs')">
+        <span class="mob-icon">📋</span>Records
       </button>
       <button class="mob-tab" data-mob="summary" onclick="switchTab('summary')">
         <span class="mob-icon">📊</span>Summary
@@ -1155,7 +1162,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
     <!-- ══ RECORDS TAB ══ -->
     <div id="tab-logs" class="tab-content">
-      <div class="flex-between">
+      <div class="flex-between" style="margin-bottom:12px;">
         <div>
           <div style="font-family:'IBM Plex Sans',sans-serif;font-size:28px;font-weight:700;color:var(--ink);letter-spacing:-0.5px;">Application Records</div>
           <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);" id="logSubtitle">Loading...</div>
@@ -1165,6 +1172,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <button class="btn btn-sky btn-sm" onclick="exportToGoogleDrive()">⬆ Drive</button>
           <button class="btn btn-primary" onclick="switchTab('newlog')">+ New Record</button>
         </div>
+      </div>
+      <!-- SEARCH BAR -->
+      <div style="position:relative;margin-bottom:14px;">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted);pointer-events:none;">🔍</span>
+        <input type="text" id="logsSearch" placeholder="Search by field, crop, product, date, applicator..." 
+          style="padding-left:42px;font-size:15px;border-radius:50px;border:2px solid var(--border);background:var(--surface);"
+          oninput="filterLogs(this.value)">
       </div>
       <!-- SELECT TOOLBAR -->
       <div id="selectionToolbar" class="hidden" style="background:var(--amber-bg);border:2px solid var(--amber);border-radius:var(--radius);padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
@@ -2143,17 +2157,57 @@ async function loadLogs() {
   renderLogsList();
 }
 
+let logsSearchQuery = '';
+
+function filterLogs(query) {
+  logsSearchQuery = query.toLowerCase().trim();
+  renderLogsList();
+}
+
 function renderLogsList() {
   const el = document.getElementById('logsList');
   const sub = document.getElementById('logSubtitle');
   if (!el) return;
-  sub.textContent = allLogs.length + ' record' + (allLogs.length !== 1 ? 's' : '') + ' on file';
+
+  // Apply search filter
+  let filteredLogs = allLogs;
+  if (logsSearchQuery) {
+    filteredLogs = allLogs.filter(l => {
+      const prods = (l.products || []).map(p => p.name).join(' ').toLowerCase();
+      return [
+        l.field_name, l.commodity_applied_to, l.pest_controlled,
+        l.application_date, l.applicator_name, l.legal_description,
+        l.pesticide_supplier, l.equipment_used
+      ].some(v => v && v.toLowerCase().includes(logsSearchQuery)) || prods.includes(logsSearchQuery);
+    });
+  }
+
+  sub.textContent = logsSearchQuery
+    ? filteredLogs.length + ' of ' + allLogs.length + ' records'
+    : allLogs.length + ' record' + (allLogs.length !== 1 ? 's' : '') + ' on file';
+
   if (!allLogs.length) {
     el.innerHTML = '<div class="empty"><div class="ei">📋</div><p>No records yet. Start your first application record.</p><button class="btn btn-primary" onclick="switchTab(&quot;newlog&quot;)">+ New Record</button></div>';
     return;
   }
+  if (logsSearchQuery && !filteredLogs.length) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'empty';
+    emptyDiv.innerHTML = '<div class="ei">🔍</div><p>No records match your search.</p>';
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'btn btn-ghost';
+    clearBtn.textContent = 'Clear Search';
+    clearBtn.onclick = () => {
+      const s = document.getElementById('logsSearch');
+      if (s) s.value = '';
+      filterLogs('');
+    };
+    emptyDiv.appendChild(clearBtn);
+    el.appendChild(emptyDiv);
+    return;
+  }
   el.innerHTML = '';
-  allLogs.forEach(log => {
+  filteredLogs.forEach(log => {
     const isSelected = selectedLogIds.has(log.id);
     const div = document.createElement('div');
     div.className = 'log-card' + (isSelected ? ' log-selected' : '');
@@ -2875,8 +2929,12 @@ function switchTab(tab) {
   }
   if (tab === 'chemicals') renderChemicalsTable();
   if (tab === 'customers') renderCustomersList();
-  if (tab === 'logs') { loadLogs(); }
+  if (tab === 'logs') { logsSearchQuery = ''; loadLogs(); }
   if (tab === 'summary') { populateYearPicker(); renderSummaryTab(); }
+  if (tab === 'profile') {
+    // Reinit signature pad after layout settles on mobile
+    setTimeout(() => { profileSigPad = null; initSignaturePads(); }, 300);
+  }
   // Scroll to top on tab change
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -3749,7 +3807,7 @@ async function submitFeedback() {
       category: feedbackCategory,
       rating: feedbackRating,
       message,
-      app_version: '2025.04.30'
+      app_version: '2026.05.01.16'
     });
     if (error) throw error;
     closeFeedback();
@@ -3771,22 +3829,28 @@ function showFeedbackError(msg) {
 // CHANGELOG MODAL — localStorage, no database needed
 // ══════════════════════════════════════════════════════
 const CHANGELOG = {
-  version: '2025.04.30',
-  title: 'Searchable Chemicals, Google Drive & Brand Refresh',
-  date: 'April 30, 2025',
+  version: '2026.05.01.16',
+  title: 'Fields from KYG, Search, New Record First & Season Filters',
+  date: 'May 1, 2026',
   items: [
-    { type: 'new',      text: 'Chemicals dropdown is now searchable — type any part of a product name to filter instantly' },
-    { type: 'new',      text: 'Google Drive integration — select one or multiple records and upload directly to your Drive' },
-    { type: 'new',      text: 'Field Name added to every application record and included in all exports' },
-    { type: 'new',      text: 'Changelog — you will now see a summary of updates on each login' },
-    { type: 'improved', text: 'Full brand refresh with new SprayLog Pro logo, charcoal and orange color palette' },
-    { type: 'improved', text: 'Light theme throughout the app for better readability in bright outdoor conditions' },
-    { type: 'improved', text: 'Larger text, bigger inputs, and improved touch targets for easier use in the field' },
-    { type: 'improved', text: 'Single-page print and PDF output — application records now fit on one page' },
-    { type: 'improved', text: 'File naming now follows Field Name + Legal Description + Date + Commodity format' },
-    { type: 'fix',      text: 'Fixed login confirmation email redirect — new users can sign in immediately after confirming' },
-    { type: 'fix',      text: 'Fixed EPA number not populating when selecting a chemical product' },
-    { type: 'fix',      text: 'Fixed record checkboxes not showing when selecting records for Google Drive upload' }
+    { type: 'new',      text: 'Field Name is now a searchable dropdown — your fields from Know Your Ground auto-populate acres and crop' },
+    { type: 'new',      text: 'Smart search bar on Records tab — search by field, crop, product, date, applicator or supplier instantly' },
+    { type: 'new',      text: 'Season Summary filters — filter by year, quarter, or month with dedicated dropdowns' },
+    { type: 'new',      text: 'Year picker in Season Summary — view any previous year of data, not just the current year' },
+    { type: 'new',      text: 'Growing Season filter now uses your custom season dates set in Profile' },
+    { type: 'new',      text: 'Forgot Password and Reset Password now working end-to-end' },
+    { type: 'new',      text: 'Feedback button — send bug reports, feature requests, and general feedback from inside the app' },
+    { type: 'new',      text: 'Account Settings in Profile — change email, change password, or delete account' },
+    { type: 'new',      text: 'Season Summary now exports to Google Drive respecting the active filter' },
+    { type: 'improved', text: 'New Record tab moved to first position in navigation for faster access' },
+    { type: 'improved', text: 'Personal Bests section in Season Summary gamifies your spray data with all-time records' },
+    { type: 'improved', text: 'Season Summary layout rebuilt — clean two-row filter bar, uniform KPI grid, 3-column personal bests' },
+    { type: 'improved', text: 'Mobile signature pad in Profile now initializes correctly on touch devices' },
+    { type: 'improved', text: 'Build number visible on login screen and app header — always know what version is deployed' },
+    { type: 'fix',      text: 'Fixed app switching back to KYG Supabase project — all data now shared between apps correctly' },
+    { type: 'fix',      text: 'Fixed filter pills wrapping to two rows on smaller screens' },
+    { type: 'fix',      text: 'Fixed Earliest Start showing seconds — now shows HH:MM only' },
+    { type: 'fix',      text: 'Fixed Year-Over-Year comparison using wrong year — now compares the two most recent data years' }
   ]
 };
 
@@ -3981,7 +4045,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
     <!-- Actions -->
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">v2025.04.30</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">v2026.05.01.16</span>
       <div class="flex-gap">
         <button class="btn btn-ghost" onclick="closeFeedback()">Cancel</button>
         <button class="btn btn-primary" onclick="submitFeedback()" id="feedbackSubmitBtn">Send Feedback</button>
