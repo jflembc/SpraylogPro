@@ -537,6 +537,24 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   .sum-bests-grid { grid-template-columns: 1fr; }
 }
 
+/* ══ STATE PILLS ══ */
+.state-pill {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ink-2);
+  text-align: center;
+  transition: all .15s;
+  letter-spacing: 0.5px;
+}
+.state-pill:hover { border-color: var(--orange); color: var(--orange); }
+.state-pill.active { background: var(--orange); border-color: var(--orange); color: #fff; }
+
 /* ══ FEEDBACK BUTTON ══ */
 #feedbackBtn {
   position: fixed;
@@ -1020,7 +1038,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;">BUILD 2026.05.01.16</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;">BUILD 2026.05.01.17</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1112,7 +1130,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;">BUILD 2026.05.01.16</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;">BUILD 2026.05.01.17</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
@@ -1446,6 +1464,23 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
               <option value="11" selected>November</option><option value="12">December</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-label">Registered States & Chemical Library</div>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Select the states you operate in. Then click <strong>Import Chemicals</strong> to add all registered products for those states to your chemical list — no manual entry needed.</p>
+        
+        <div style="margin-bottom:16px;">
+          <label>States You Operate In</label>
+          <div id="statePickerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:8px;"></div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="importChemicalsFromLibrary()" id="importChemBtn">
+            ⬇ Import Chemicals for My States
+          </button>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="importChemStatus"></span>
         </div>
       </div>
 
@@ -1897,6 +1932,7 @@ async function loadProfile() {
     document.getElementById('pr_zip').value = userProfile.zip || '';
     document.getElementById('pr_cert').value = userProfile.cert_number || '';
     if (userProfile.growing_season_start) document.getElementById('pr_seasonStart').value = userProfile.growing_season_start;
+    renderStatePicker();
     if (userProfile.growing_season_end) document.getElementById('pr_seasonEnd').value = userProfile.growing_season_end;
     if (userProfile.cert_issued) document.getElementById('pr_certIssued').value = userProfile.cert_issued;
     if (userProfile.cert_expires) document.getElementById('pr_certExpires').value = userProfile.cert_expires;
@@ -2932,6 +2968,7 @@ function switchTab(tab) {
   if (tab === 'logs') { logsSearchQuery = ''; loadLogs(); }
   if (tab === 'summary') { populateYearPicker(); renderSummaryTab(); }
   if (tab === 'profile') {
+    renderStatePicker();
     // Reinit signature pad after layout settles on mobile
     setTimeout(() => { profileSigPad = null; initSignaturePads(); }, 300);
   }
@@ -3747,6 +3784,111 @@ async function uploadFileToDrive(filename, content) {
 }
 
 // ══════════════════════════════════════════════════════
+// CHEMICAL LIBRARY — STATE IMPORT
+// ══════════════════════════════════════════════════════
+const US_STATES = [
+  'AL','AR','AZ','CA','CO','CT','DE','FL','GA','IA','ID','IL','IN',
+  'KS','KY','LA','MA','MD','ME','MI','MN','MO','MS','MT','NC','ND',
+  'NE','NH','NJ','NM','NV','NY','OH','OK','OR','PA','RI','SC','SD',
+  'TN','TX','UT','VA','VT','WA','WI','WV','WY'
+];
+
+function renderStatePicker() {
+  const grid = document.getElementById('statePickerGrid');
+  if (!grid) return;
+  const saved = userProfile?.registered_states || [];
+  grid.innerHTML = US_STATES.map(st => {
+    const active = saved.includes(st);
+    return `<button class="state-pill${active ? ' active' : ''}" data-state="${st}" onclick="toggleState('${st}')">${st}</button>`;
+  }).join('');
+}
+
+function toggleState(st) {
+  if (!userProfile) return;
+  if (!userProfile.registered_states) userProfile.registered_states = [];
+  const idx = userProfile.registered_states.indexOf(st);
+  if (idx > -1) userProfile.registered_states.splice(idx, 1);
+  else userProfile.registered_states.push(st);
+  // Update pill UI
+  const btn = document.querySelector(`[data-state="${st}"]`);
+  if (btn) btn.classList.toggle('active', userProfile.registered_states.includes(st));
+  // Auto-save to profile
+  sb.from('profiles').update({ registered_states: userProfile.registered_states }).eq('id', currentUser.id);
+}
+
+async function importChemicalsFromLibrary() {
+  if (!currentUser) return;
+  const states = userProfile?.registered_states || [];
+  if (!states.length) {
+    toast('Select at least one state first.', 'warn');
+    return;
+  }
+  const btn = document.getElementById('importChemBtn');
+  const status = document.getElementById('importChemStatus');
+  btn.disabled = true;
+  btn.textContent = 'Importing...';
+  status.textContent = '';
+
+  try {
+    // Fetch library products matching any of the user's states
+    const { data: library, error } = await sb
+      .from('chemical_library')
+      .select('*')
+      .overlaps('registered_states', states);
+
+    if (error) throw error;
+    if (!library?.length) {
+      status.textContent = 'No products found for selected states.';
+      return;
+    }
+
+    // Get user's existing chemical names to avoid dupes
+    const { data: existing } = await sb
+      .from('chemicals')
+      .select('name')
+      .eq('owner_id', currentUser.id);
+    const existingNames = new Set((existing || []).map(c => c.name.toLowerCase()));
+
+    // Filter out dupes
+    const toInsert = library
+      .filter(c => !existingNames.has(c.product_name.toLowerCase()))
+      .map(c => ({
+        owner_id: currentUser.id,
+        name: c.product_name,
+        epa_number: c.epa_number || '',
+        active_ingredient: c.active_ingredient || '',
+        signal_word: c.signal_word || '',
+        rei_hours: c.rei_hours || 0,
+        ppe_required: c.ppe || '',
+        category: c.product_type || ''
+      }));
+
+    if (!toInsert.length) {
+      status.textContent = `Already have all ${library.length} products for those states.`;
+      return;
+    }
+
+    // Insert in batches of 50
+    let imported = 0;
+    for (let i = 0; i < toInsert.length; i += 50) {
+      const batch = toInsert.slice(i, i + 50);
+      const { error: insErr } = await sb.from('chemicals').insert(batch);
+      if (!insErr) imported += batch.length;
+    }
+
+    await loadChemicals();
+    toast(`✓ Imported ${imported} chemicals for ${states.join(', ')}`);
+    status.textContent = `${imported} new products added. ${library.length - imported} already existed.`;
+
+  } catch(e) {
+    toast('Import failed: ' + e.message, 'warn');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬇ Import Chemicals for My States';
+  }
+}
+
+// ══════════════════════════════════════════════════════
 // FEEDBACK
 // ══════════════════════════════════════════════════════
 let feedbackRating = 0;
@@ -3807,7 +3949,7 @@ async function submitFeedback() {
       category: feedbackCategory,
       rating: feedbackRating,
       message,
-      app_version: '2026.05.01.16'
+      app_version: '2026.05.01.17'
     });
     if (error) throw error;
     closeFeedback();
@@ -3829,10 +3971,12 @@ function showFeedbackError(msg) {
 // CHANGELOG MODAL — localStorage, no database needed
 // ══════════════════════════════════════════════════════
 const CHANGELOG = {
-  version: '2026.05.01.16',
-  title: 'Fields from KYG, Search, New Record First & Season Filters',
-  date: 'May 1, 2026',
+  version: '2026.05.01.17',
+  title: 'Chemical Library — Import by State',
+  date: 'May 4, 2026',
   items: [
+    { type: 'new',      text: 'Chemical Library — select your states in Profile and import all registered products in one click, no manual entry' },
+    { type: 'new',      text: 'State selector in Profile — pick any US states you operate in, your selection is saved automatically' },
     { type: 'new',      text: 'Field Name is now a searchable dropdown — your fields from Know Your Ground auto-populate acres and crop' },
     { type: 'new',      text: 'Smart search bar on Records tab — search by field, crop, product, date, applicator or supplier instantly' },
     { type: 'new',      text: 'Season Summary filters — filter by year, quarter, or month with dedicated dropdowns' },
