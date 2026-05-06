@@ -3825,7 +3825,7 @@ async function syncChemicalLibraryFromEPA() {
   if (status) status.textContent = 'Starting EPA sync...';
 
   try {
-    const { data, error } = await sb.functions.invoke('sync-epa-library');
+    const { data, error } = await sb.functions.invoke('sync-chemical-library');
     if (error) throw error;
 
     const upserted = Number(data?.upserted || 0);
