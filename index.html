@@ -3847,8 +3847,20 @@ async function fetchAprrilPage(offset, limit) {
     reg_type: 'Sec3',
     $orderby: { ri_and_dp_num_sort: 'asc' }
   };
-  const url = `${EPA_APPRIL_BASE}?q=${encodeURIComponent(JSON.stringify(q))}&limit=${limit}&offset=${offset}`;
-  const res = await fetch(url);
+  const url = new URL(EPA_APPRIL_BASE);
+  url.searchParams.set('q', JSON.stringify(q));
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('offset', String(offset));
+
+  // Primary request: server-side filtered query.
+  let res = await fetch(url.toString());
+  if (res.ok) return res.json();
+
+  // Fallback request: some APPRIL gateway paths reject complex q payloads.
+  const fallbackUrl = new URL(EPA_APPRIL_BASE);
+  fallbackUrl.searchParams.set('limit', String(limit));
+  fallbackUrl.searchParams.set('offset', String(offset));
+  res = await fetch(fallbackUrl.toString());
   if (!res.ok) throw new Error('EPA API request failed with status ' + res.status);
   return res.json();
 }
@@ -3872,7 +3884,14 @@ async function syncChemicalLibraryFromEPA() {
       const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
       if (!items.length) break;
 
-      const mapped = items.map(mapAprrilRecordToLibrary).filter(Boolean);
+      // Keep only active Sec3 products even if fallback endpoint is used.
+      const filteredItems = items.filter(rec => {
+        const s = (getAprrilValue(rec, 'status_group') || '').toString().toLowerCase();
+        const r = (getAprrilValue(rec, 'reg_type') || '').toString().toLowerCase();
+        return s === 'active' && r === 'sec3';
+      });
+
+      const mapped = filteredItems.map(mapAprrilRecordToLibrary).filter(Boolean);
       fetched += items.length;
       pages += 1;
 
