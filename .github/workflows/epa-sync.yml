@@ -22,7 +22,7 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm install xlsx @supabase/supabase-js
+        - run: npm install xlsx @supabase/supabase-js ws
 
       - name: Run EPA sync
         run: node scripts/epa-sync.mjs
