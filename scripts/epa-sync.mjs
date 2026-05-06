@@ -114,12 +114,22 @@ async function run() {
       throw new Error(`EPA returned ${buf.length} bytes — likely HTML not Excel. Check the download URL.`);
     }
 
-    const wb = XLSX.read(buf, { type: "buffer" });
+    const wb = XLSX.read(buf, {
+      type: "buffer",
+      dense: true,
+      cellText: false,
+      cellDates: false,
+    });
     const sheet = wb.SheetNames?.[0];
     if (!sheet) throw new Error("EPA workbook missing sheet");
 
     console.log("Parsing sheet:", sheet);
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { defval: "" });
+    console.log("Sheet ref:", wb.Sheets[sheet]["!ref"] || "unknown");
+
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], {
+      defval: "",
+      raw: false,
+    });
     console.log(`Total rows: ${rows.length.toLocaleString()}`);
     if (rows.length > 0) console.log("Columns detected:", Object.keys(rows[0]).join(", "));
 
