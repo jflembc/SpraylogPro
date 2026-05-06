@@ -1,6 +1,5 @@
 import * as XLSX from "xlsx";
 import { createClient } from "@supabase/supabase-js";
-import ws from "ws";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -8,9 +7,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
 }
 
-const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  realtime: { transport: ws }
-});
+const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 const EPA_DUMP_URL = "https://www3.epa.gov/pesticides/appril/apprildatadump_public.xlsx";
 
 function nyNow() {
@@ -101,11 +98,18 @@ async function run() {
 
   try {
     console.log("Fetching EPA APPRIL dump (~93MB)...");
-    const res = await fetch(EPA_DUMP_URL);
+    const res = await fetch(EPA_DUMP_URL, { redirect: "follow" });
+    console.log(`EPA response: ${res.status} ${res.statusText}`);
+    console.log(`Content-Type: ${res.headers.get("content-type")}`);
+    console.log(`Content-Length: ${res.headers.get("content-length")}`);
     if (!res.ok) throw new Error(`EPA fetch failed: ${res.status} ${res.statusText}`);
 
     const buf = Buffer.from(await res.arrayBuffer());
     console.log(`Downloaded ${(buf.length / 1024 / 1024).toFixed(1)} MB`);
+    if (buf.length < 10000) {
+      console.log("Response too small, first 500 chars:", buf.toString("utf8").slice(0, 500));
+      throw new Error(`EPA returned ${buf.length} bytes — likely HTML not Excel. Check the download URL.`);
+    }
 
     const wb = XLSX.read(buf, { type: "buffer" });
     const sheet = wb.SheetNames?.[0];
