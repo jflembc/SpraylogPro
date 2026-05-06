@@ -1468,17 +1468,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
 
       <div class="card">
-        <div class="sec-label">Registered States & Chemical Library</div>
-        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Select the states you operate in. Then click <strong>Import Chemicals</strong> to add all registered products for those states to your chemical list — no manual entry needed.</p>
-        
-        <div style="margin-bottom:16px;">
-          <label>States You Operate In</label>
-          <div id="statePickerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:8px;"></div>
-        </div>
-
+        <div class="sec-label">Chemical Library</div>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Load the full EPA product library into your account to power smart search in New Application Record.</p>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="importChemicalsFromLibrary()" id="importChemBtn">
-            ⬇ Import Chemicals for My States
+            ⬇ Import Full Chemical Library
           </button>
           <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="importChemStatus"></span>
         </div>
@@ -3784,7 +3778,7 @@ async function uploadFileToDrive(filename, content) {
 }
 
 // ══════════════════════════════════════════════════════
-// CHEMICAL LIBRARY — STATE IMPORT
+// CHEMICAL LIBRARY — FULL IMPORT
 // ══════════════════════════════════════════════════════
 const US_STATES = [
   'AL','AR','AZ','CA','CO','CT','DE','FL','GA','IA','ID','IL','IN',
@@ -3818,11 +3812,6 @@ function toggleState(st) {
 
 async function importChemicalsFromLibrary() {
   if (!currentUser) return;
-  const states = userProfile?.registered_states || [];
-  if (!states.length) {
-    toast('Select at least one state first.', 'warn');
-    return;
-  }
   const btn = document.getElementById('importChemBtn');
   const status = document.getElementById('importChemStatus');
   btn.disabled = true;
@@ -3830,15 +3819,14 @@ async function importChemicalsFromLibrary() {
   status.textContent = '';
 
   try {
-    // Fetch library products matching any of the user's states
+    // Fetch full library for account import
     const { data: library, error } = await sb
       .from('chemical_library')
-      .select('*')
-      .overlaps('registered_states', states);
+      .select('*');
 
     if (error) throw error;
     if (!library?.length) {
-      status.textContent = 'No products found for selected states.';
+      status.textContent = 'No products found in chemical library.';
       return;
     }
 
@@ -3864,7 +3852,7 @@ async function importChemicalsFromLibrary() {
       }));
 
     if (!toInsert.length) {
-      status.textContent = `Already have all ${library.length} products for those states.`;
+      status.textContent = `Already have all ${library.length} products.`;
       return;
     }
 
@@ -3877,14 +3865,14 @@ async function importChemicalsFromLibrary() {
     }
 
     await loadChemicals();
-    toast(`✓ Imported ${imported} chemicals for ${states.join(', ')}`);
+    toast(`✓ Imported ${imported} chemicals`);
     status.textContent = `${imported} new products added. ${library.length - imported} already existed.`;
 
   } catch(e) {
     toast('Import failed: ' + e.message, 'warn');
   } finally {
     btn.disabled = false;
-    btn.textContent = '⬇ Import Chemicals for My States';
+    btn.textContent = '⬇ Import Full Chemical Library';
   }
 }
 
