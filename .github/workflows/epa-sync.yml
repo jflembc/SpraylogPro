@@ -1,5 +1,5 @@
 name: EPA Weekly Sync
-
+ 
 on:
   schedule:
     - cron: "0 23 * * 1"  # Every Monday at 7PM ET (23:00 UTC)
@@ -9,24 +9,24 @@ on:
         description: 'Force run (bypasses time gate)'
         required: false
         default: 'true'
-
+ 
 jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
+ 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-
+ 
       - name: Install dependencies
-        - run: npm install xlsx @supabase/supabase-js ws
-
+        run: npm install xlsx @supabase/supabase-js
+ 
       - name: Run EPA sync
         run: node scripts/epa-sync.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          MANUAL_RUN: "true"
