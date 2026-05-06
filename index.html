@@ -1038,7 +1038,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.06.01</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.06.02</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1130,7 +1130,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.06.01</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.06.02</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
@@ -1695,7 +1695,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 const SUPABASE_URL = 'https://tyttsvngdeitkjttdarp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dHRzdm5nZGVpdGtqdHRkYXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM0MTMsImV4cCI6MjA5MTg2OTQxM30.whG0Kp-ybQEo4vqhlSCUmjJJT5DKOBLqcNms4ngsYF8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_BUILD = '2026.05.06.01';
+const APP_BUILD = '2026.05.06.02';
 
 const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 
@@ -1894,6 +1894,7 @@ async function bootApp(user) {
     document.getElementById('app').classList.remove('hidden');
     await loadProfile();
     await loadChemicals();
+    await ensureChemicalsSeeded();
     await loadFields();
     await loadCustomers();
     await loadLogs();
@@ -1905,6 +1906,19 @@ async function bootApp(user) {
   } catch(e) {
     console.error('Boot error:', e);
     switchTab('logs');
+  }
+}
+
+async function ensureChemicalsSeeded() {
+  if (!currentUser) return;
+  if (Array.isArray(allChemicals) && allChemicals.length > 0) return;
+  try {
+    const result = await importChemicalsFromLibrary({ silent: true, autoSeed: true });
+    if (result?.imported > 0) {
+      toast(`✓ Loaded ${result.imported} products for first-time setup`);
+    }
+  } catch (e) {
+    console.warn('Auto-seed chemicals skipped:', e?.message || e);
   }
 }
 
@@ -3818,32 +3832,15 @@ function toggleState(st) {
 }
 
 async function syncChemicalLibraryFromEPA() {
-  if (!currentUser) return;
-  const btn = document.getElementById('syncEpaBtn');
   const status = document.getElementById('syncEpaStatus');
-  if (btn) { btn.disabled = true; btn.textContent = 'Refreshing EPA Data...'; }
-  if (status) status.textContent = 'Starting EPA sync...';
-
-  try {
-    const { data, error } = await sb.functions.invoke('sync-chemical-library');
-    if (error) throw error;
-
-    const upserted = Number(data?.upserted || 0);
-    const fetched = Number(data?.fetched || 0);
-    const source = data?.source || 'EPA';
-    if (status) {
-      status.textContent = `EPA sync complete (${source}): ${upserted} records updated from ${fetched} rows.`;
-    }
-    toast(`✓ EPA sync complete (${upserted} upserted)`);
-  } catch (e) {
-    if (status) status.textContent = 'EPA sync failed.';
-    toast('EPA sync failed: ' + e.message, 'warn');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh EPA Chemical Library'; }
-  }
+  if (status) status.textContent = 'Weekly EPA sync runs automatically on Monday evening.';
+  toast('EPA refresh is automated weekly. Use Import Full Chemical Library to load current products.', 'info');
 }
 
-async function importChemicalsFromLibrary() {
+async function importChemicalsFromLibrary(options) {
+  options = options || {};
+  const silent = !!options.silent;
+  const autoSeed = !!options.autoSeed;
   if (!currentUser) return;
   const btn = document.getElementById('importChemBtn');
   const status = document.getElementById('importChemStatus');
@@ -3860,7 +3857,8 @@ async function importChemicalsFromLibrary() {
     if (error) throw error;
     if (!library?.length) {
       status.textContent = 'No products found in chemical library.';
-      return;
+      if (!silent) toast('No products available yet. EPA weekly sync may still be running.', 'warn');
+      return { imported: 0, total: 0 };
     }
 
     // Get user's existing chemical names to avoid dupes
@@ -3886,7 +3884,7 @@ async function importChemicalsFromLibrary() {
 
     if (!toInsert.length) {
       status.textContent = `Already have all ${library.length} products.`;
-      return;
+      return { imported: 0, total: library.length };
     }
 
     // Insert in batches of 50
@@ -3898,11 +3896,14 @@ async function importChemicalsFromLibrary() {
     }
 
     await loadChemicals();
-    toast(`✓ Imported ${imported} chemicals`);
+    if (!silent) toast(`✓ Imported ${imported} chemicals`);
+    if (autoSeed && imported > 0) status.textContent = `First-time setup complete: ${imported} products loaded.`;
     status.textContent = `${imported} new products added. ${library.length - imported} already existed.`;
+    return { imported, total: library.length };
 
   } catch(e) {
-    toast('Import failed: ' + e.message, 'warn');
+    if (!silent) toast('Import failed: ' + e.message, 'warn');
+    throw e;
   } finally {
     btn.disabled = false;
     btn.textContent = '⬇ Import Full Chemical Library';
@@ -3993,13 +3994,13 @@ function showFeedbackError(msg) {
 // ══════════════════════════════════════════════════════
 const CHANGELOG = {
   version: APP_BUILD,
-  title: 'EPA Library Refresh Is Live',
+  title: 'Weekly Auto-Sync + First-Time Load',
   date: 'May 6, 2026',
   items: [
-    { type: 'new',      text: 'New EPA refresh button added in Profile so you can pull the latest product list.' },
-    { type: 'new',      text: 'One-click full chemical import added so your search sees all loaded products.' },
-    { type: 'improved', text: 'Build number now stays in sync across login screen, app header, and feedback logs.' },
-    { type: 'improved', text: 'What\'s New language is now short and plain so updates are easier to scan in the cab.' }
+    { type: 'new',      text: 'Chemical library now updates automatically each week, so your product list stays fresh.' },
+    { type: 'new',      text: 'First-time users now auto-load products into the app so search works right away.' },
+    { type: 'improved', text: 'Import Full Chemical Library still works anytime if you want to reload products manually.' },
+    { type: 'improved', text: 'Build number and What\'s New were updated for this release.' }
   ]
 };
 
