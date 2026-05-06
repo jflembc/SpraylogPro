@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { createClient } from "@supabase/supabase-js";
+import ws from "ws";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -7,7 +8,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
 }
 
-const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  realtime: { transport: ws }
+});
 const EPA_DUMP_URL = "https://www3.epa.gov/pesticides/appril/apprildatadump_public.xlsx";
 
 function nyNow() {
