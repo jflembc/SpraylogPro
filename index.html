@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════
    DESIGN TOKENS
@@ -3818,79 +3817,6 @@ function toggleState(st) {
   sb.from('profiles').update({ registered_states: userProfile.registered_states }).eq('id', currentUser.id);
 }
 
-const EPA_APPRIL_BASE = 'https://ordspub.epa.gov/ords/pesticides/apprilapi/';
-const EPA_APPRIL_DUMP_URL = 'https://www3.epa.gov/pesticides/appril/apprildatadump_public.xlsx';
-
-function getAprrilValue(rec, key) {
-  if (!rec) return null;
-  return rec[key] ?? rec[key.toLowerCase()] ?? rec[key.toUpperCase()] ?? null;
-}
-
-function getAprrilValueLoose(rec, ...keys) {
-  if (!rec) return null;
-  const normalized = {};
-  Object.keys(rec).forEach(k => {
-    normalized[k.toLowerCase().replace(/[^a-z0-9]/g, '')] = rec[k];
-  });
-  for (const key of keys) {
-    const n = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (normalized[n] !== undefined && normalized[n] !== null) return normalized[n];
-  }
-  return null;
-}
-
-function mapAprrilRecordToLibrary(rec) {
-  const productName = (getAprrilValue(rec, 'product_name') || '').toString().trim();
-  const epaNumber = (getAprrilValue(rec, 'reg_num') || '').toString().trim();
-  if (!productName || !epaNumber) return null;
-  return {
-    epa_number: epaNumber,
-    product_name: productName,
-    active_ingredient: (getAprrilValue(rec, 'ais') || '').toString().trim(),
-    signal_word: (getAprrilValue(rec, 'signal_word') || '').toString().trim(),
-    product_type: ((getAprrilValue(rec, 'pesticide_type') || getAprrilValue(rec, 'reg_type') || '') + '').trim(),
-    status_group: (getAprrilValue(rec, 'status_group') || '').toString().trim(),
-    use_pattern: (getAprrilValue(rec, 'use_pattern') || '').toString().trim(),
-    company_name: (getAprrilValue(rec, 'company_name') || '').toString().trim(),
-    source: 'EPA_APPRIL'
-  };
-}
-
-async function fetchAprrilPage(offset, limit) {
-  const q = {
-    status_group: 'Active',
-    reg_type: 'Sec3',
-    $orderby: { ri_and_dp_num_sort: 'asc' }
-  };
-  const url = new URL(EPA_APPRIL_BASE);
-  url.searchParams.set('q', JSON.stringify(q));
-  url.searchParams.set('limit', String(limit));
-  url.searchParams.set('offset', String(offset));
-
-  // Primary request: server-side filtered query.
-  let res = await fetch(url.toString());
-  if (res.ok) return res.json();
-
-  // Fallback request: some APPRIL gateway paths reject complex q payloads.
-  const fallbackUrl = new URL(EPA_APPRIL_BASE);
-  fallbackUrl.searchParams.set('limit', String(limit));
-  fallbackUrl.searchParams.set('offset', String(offset));
-  res = await fetch(fallbackUrl.toString());
-  if (!res.ok) throw new Error('EPA API request failed with status ' + res.status);
-  return res.json();
-}
-
-async function fetchAprrilFromDataDump() {
-  if (typeof XLSX === 'undefined') throw new Error('XLSX parser not loaded');
-  const res = await fetch(EPA_APPRIL_DUMP_URL);
-  if (!res.ok) throw new Error('EPA data dump request failed with status ' + res.status);
-  const ab = await res.arrayBuffer();
-  const wb = XLSX.read(ab, { type: 'array' });
-  const firstSheet = wb.SheetNames?.[0];
-  if (!firstSheet) return [];
-  return XLSX.utils.sheet_to_json(wb.Sheets[firstSheet], { defval: '' });
-}
-
 async function syncChemicalLibraryFromEPA() {
   if (!currentUser) return;
   const btn = document.getElementById('syncEpaBtn');
@@ -3899,83 +3825,15 @@ async function syncChemicalLibraryFromEPA() {
   if (status) status.textContent = 'Starting EPA sync...';
 
   try {
-    const PAGE_LIMIT = 10000;
-    let offset = 0;
-    let pages = 0;
-    let fetched = 0;
-    let upserted = 0;
-    let usedDataDump = false;
+    const { data, error } = await sb.functions.invoke('sync-epa-library');
+    if (error) throw error;
 
-    try {
-      while (true) {
-        const payload = await fetchAprrilPage(offset, PAGE_LIMIT);
-        const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
-        if (!items.length) break;
-
-        const filteredItems = items.filter(rec => {
-          const s = (getAprrilValue(rec, 'status_group') || '').toString().toLowerCase();
-          const r = (getAprrilValue(rec, 'reg_type') || '').toString().toLowerCase();
-          return s === 'active' && r === 'sec3';
-        });
-
-        const mapped = filteredItems.map(mapAprrilRecordToLibrary).filter(Boolean);
-        fetched += items.length;
-        pages += 1;
-
-        if (mapped.length) {
-          const { error } = await sb
-            .from('chemical_library')
-            .upsert(mapped, { onConflict: 'epa_number' });
-          if (error) throw error;
-          upserted += mapped.length;
-        }
-
-        if (status) status.textContent = `EPA sync in progress: ${fetched} records fetched (${pages} page${pages === 1 ? '' : 's'}).`;
-        if (items.length < PAGE_LIMIT) break;
-        offset += PAGE_LIMIT;
-      }
-    } catch (apiErr) {
-      usedDataDump = true;
-      if (status) status.textContent = 'REST endpoint unavailable, trying EPA weekly data dump...';
-      const rows = await fetchAprrilFromDataDump();
-      fetched = rows.length;
-      pages = 1;
-
-      const filteredRows = rows.filter(rec => {
-        const s = (getAprrilValueLoose(rec, 'status_group', 'status group') || '').toString().toLowerCase();
-        const r = (getAprrilValueLoose(rec, 'reg_type', 'reg type') || '').toString().toLowerCase();
-        return s === 'active' && r === 'sec3';
-      });
-
-      const mapped = filteredRows.map(rec => {
-        const mappedRec = {
-          reg_num: getAprrilValueLoose(rec, 'reg_num', 'registration number', 'registration_number'),
-          product_name: getAprrilValueLoose(rec, 'product_name', 'product name'),
-          ais: getAprrilValueLoose(rec, 'ais', 'active ingredient(s)', 'active ingredients'),
-          signal_word: getAprrilValueLoose(rec, 'signal_word', 'signal word'),
-          pesticide_type: getAprrilValueLoose(rec, 'pesticide_type', 'pesticide type'),
-          status_group: getAprrilValueLoose(rec, 'status_group', 'status group'),
-          use_pattern: getAprrilValueLoose(rec, 'use_pattern', 'use pattern'),
-          company_name: getAprrilValueLoose(rec, 'company_name', 'company name'),
-          reg_type: getAprrilValueLoose(rec, 'reg_type', 'reg type')
-        };
-        return mapAprrilRecordToLibrary(mappedRec);
-      }).filter(Boolean);
-
-      if (mapped.length) {
-        for (let i = 0; i < mapped.length; i += 1000) {
-          const batch = mapped.slice(i, i + 1000);
-          const { error } = await sb.from('chemical_library').upsert(batch, { onConflict: 'epa_number' });
-          if (error) throw error;
-          upserted += batch.length;
-          if (status) status.textContent = `EPA dump sync in progress: ${upserted} records upserted...`;
-        }
-      }
+    const upserted = Number(data?.upserted || 0);
+    const fetched = Number(data?.fetched || 0);
+    const source = data?.source || 'EPA';
+    if (status) {
+      status.textContent = `EPA sync complete (${source}): ${upserted} records updated from ${fetched} rows.`;
     }
-
-    if (status) status.textContent = usedDataDump
-      ? `EPA sync complete (weekly dump): ${upserted} records upserted from ${fetched} rows.`
-      : `EPA sync complete: ${upserted} records upserted from ${fetched} fetched.`;
     toast(`✓ EPA sync complete (${upserted} upserted)`);
   } catch (e) {
     if (status) status.textContent = 'EPA sync failed.';
