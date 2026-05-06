@@ -1038,7 +1038,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;">BUILD 2026.05.01.17</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.06.01</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1130,7 +1130,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;">BUILD 2026.05.01.17</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.06.01</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
@@ -1469,7 +1469,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
       <div class="card">
         <div class="sec-label">Chemical Library</div>
-        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Load the full EPA product library into your account to power smart search in New Application Record.</p>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Refresh from EPA APPRIL, then import your full chemical library for smart product search in New Application Record.</p>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+          <button class="btn btn-outline" onclick="syncChemicalLibraryFromEPA()" id="syncEpaBtn">
+            ↻ Refresh EPA Chemical Library
+          </button>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="syncEpaStatus"></span>
+        </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="importChemicalsFromLibrary()" id="importChemBtn">
             ⬇ Import Full Chemical Library
@@ -1689,6 +1695,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 const SUPABASE_URL = 'https://tyttsvngdeitkjttdarp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dHRzdm5nZGVpdGtqdHRkYXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM0MTMsImV4cCI6MjA5MTg2OTQxM30.whG0Kp-ybQEo4vqhlSCUmjJJT5DKOBLqcNms4ngsYF8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const APP_BUILD = '2026.05.06.01';
 
 const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 
@@ -3810,6 +3817,88 @@ function toggleState(st) {
   sb.from('profiles').update({ registered_states: userProfile.registered_states }).eq('id', currentUser.id);
 }
 
+const EPA_APPRIL_BASE = 'https://ordspub.epa.gov/ords/pesticides/apprilapi/';
+
+function getAprrilValue(rec, key) {
+  if (!rec) return null;
+  return rec[key] ?? rec[key.toLowerCase()] ?? rec[key.toUpperCase()] ?? null;
+}
+
+function mapAprrilRecordToLibrary(rec) {
+  const productName = (getAprrilValue(rec, 'product_name') || '').toString().trim();
+  const epaNumber = (getAprrilValue(rec, 'reg_num') || '').toString().trim();
+  if (!productName || !epaNumber) return null;
+  return {
+    epa_number: epaNumber,
+    product_name: productName,
+    active_ingredient: (getAprrilValue(rec, 'ais') || '').toString().trim(),
+    signal_word: (getAprrilValue(rec, 'signal_word') || '').toString().trim(),
+    product_type: ((getAprrilValue(rec, 'pesticide_type') || getAprrilValue(rec, 'reg_type') || '') + '').trim(),
+    status_group: (getAprrilValue(rec, 'status_group') || '').toString().trim(),
+    use_pattern: (getAprrilValue(rec, 'use_pattern') || '').toString().trim(),
+    company_name: (getAprrilValue(rec, 'company_name') || '').toString().trim(),
+    source: 'EPA_APPRIL'
+  };
+}
+
+async function fetchAprrilPage(offset, limit) {
+  const q = {
+    status_group: 'Active',
+    reg_type: 'Sec3',
+    $orderby: { ri_and_dp_num_sort: 'asc' }
+  };
+  const url = `${EPA_APPRIL_BASE}?q=${encodeURIComponent(JSON.stringify(q))}&limit=${limit}&offset=${offset}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('EPA API request failed with status ' + res.status);
+  return res.json();
+}
+
+async function syncChemicalLibraryFromEPA() {
+  if (!currentUser) return;
+  const btn = document.getElementById('syncEpaBtn');
+  const status = document.getElementById('syncEpaStatus');
+  if (btn) { btn.disabled = true; btn.textContent = 'Refreshing EPA Data...'; }
+  if (status) status.textContent = 'Starting EPA sync...';
+
+  try {
+    const PAGE_LIMIT = 10000;
+    let offset = 0;
+    let pages = 0;
+    let fetched = 0;
+    let upserted = 0;
+
+    while (true) {
+      const payload = await fetchAprrilPage(offset, PAGE_LIMIT);
+      const items = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
+      if (!items.length) break;
+
+      const mapped = items.map(mapAprrilRecordToLibrary).filter(Boolean);
+      fetched += items.length;
+      pages += 1;
+
+      if (mapped.length) {
+        const { error } = await sb
+          .from('chemical_library')
+          .upsert(mapped, { onConflict: 'epa_number' });
+        if (error) throw error;
+        upserted += mapped.length;
+      }
+
+      if (status) status.textContent = `EPA sync in progress: ${fetched} records fetched (${pages} page${pages === 1 ? '' : 's'}).`;
+      if (items.length < PAGE_LIMIT) break;
+      offset += PAGE_LIMIT;
+    }
+
+    if (status) status.textContent = `EPA sync complete: ${upserted} records upserted from ${fetched} fetched.`;
+    toast(`✓ EPA sync complete (${upserted} upserted)`);
+  } catch (e) {
+    if (status) status.textContent = 'EPA sync failed.';
+    toast('EPA sync failed: ' + e.message, 'warn');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh EPA Chemical Library'; }
+  }
+}
+
 async function importChemicalsFromLibrary() {
   if (!currentUser) return;
   const btn = document.getElementById('importChemBtn');
@@ -3937,7 +4026,7 @@ async function submitFeedback() {
       category: feedbackCategory,
       rating: feedbackRating,
       message,
-      app_version: '2026.05.01.17'
+      app_version: APP_BUILD
     });
     if (error) throw error;
     closeFeedback();
@@ -3959,30 +4048,14 @@ function showFeedbackError(msg) {
 // CHANGELOG MODAL — localStorage, no database needed
 // ══════════════════════════════════════════════════════
 const CHANGELOG = {
-  version: '2026.05.01.17',
-  title: 'Chemical Library — Import by State',
-  date: 'May 4, 2026',
+  version: APP_BUILD,
+  title: 'EPA Library Refresh Is Live',
+  date: 'May 6, 2026',
   items: [
-    { type: 'new',      text: 'Chemical Library — select your states in Profile and import all registered products in one click, no manual entry' },
-    { type: 'new',      text: 'State selector in Profile — pick any US states you operate in, your selection is saved automatically' },
-    { type: 'new',      text: 'Field Name is now a searchable dropdown — your fields from Know Your Ground auto-populate acres and crop' },
-    { type: 'new',      text: 'Smart search bar on Records tab — search by field, crop, product, date, applicator or supplier instantly' },
-    { type: 'new',      text: 'Season Summary filters — filter by year, quarter, or month with dedicated dropdowns' },
-    { type: 'new',      text: 'Year picker in Season Summary — view any previous year of data, not just the current year' },
-    { type: 'new',      text: 'Growing Season filter now uses your custom season dates set in Profile' },
-    { type: 'new',      text: 'Forgot Password and Reset Password now working end-to-end' },
-    { type: 'new',      text: 'Feedback button — send bug reports, feature requests, and general feedback from inside the app' },
-    { type: 'new',      text: 'Account Settings in Profile — change email, change password, or delete account' },
-    { type: 'new',      text: 'Season Summary now exports to Google Drive respecting the active filter' },
-    { type: 'improved', text: 'New Record tab moved to first position in navigation for faster access' },
-    { type: 'improved', text: 'Personal Bests section in Season Summary gamifies your spray data with all-time records' },
-    { type: 'improved', text: 'Season Summary layout rebuilt — clean two-row filter bar, uniform KPI grid, 3-column personal bests' },
-    { type: 'improved', text: 'Mobile signature pad in Profile now initializes correctly on touch devices' },
-    { type: 'improved', text: 'Build number visible on login screen and app header — always know what version is deployed' },
-    { type: 'fix',      text: 'Fixed app switching back to KYG Supabase project — all data now shared between apps correctly' },
-    { type: 'fix',      text: 'Fixed filter pills wrapping to two rows on smaller screens' },
-    { type: 'fix',      text: 'Fixed Earliest Start showing seconds — now shows HH:MM only' },
-    { type: 'fix',      text: 'Fixed Year-Over-Year comparison using wrong year — now compares the two most recent data years' }
+    { type: 'new',      text: 'New EPA refresh button added in Profile so you can pull the latest product list.' },
+    { type: 'new',      text: 'One-click full chemical import added so your search sees all loaded products.' },
+    { type: 'improved', text: 'Build number now stays in sync across login screen, app header, and feedback logs.' },
+    { type: 'improved', text: 'What\'s New language is now short and plain so updates are easier to scan in the cab.' }
   ]
 };
 
@@ -4012,6 +4085,13 @@ function showReleaseModal(release) {
 
 function closeReleaseModal() {
   document.getElementById('releaseModal').classList.add('hidden');
+}
+
+function applyBuildLabels() {
+  const auth = document.getElementById('authBuildLabel');
+  const app = document.getElementById('appBuildLabel');
+  if (auth) auth.textContent = 'BUILD ' + APP_BUILD;
+  if (app) app.textContent = 'BUILD ' + APP_BUILD;
 }
 
 // ══════════════════════════════════════════════════════
@@ -4047,6 +4127,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
 (async () => {
   try {
+    applyBuildLabels();
     const params = new URLSearchParams(window.location.search);
     const slpAt = params.get('slp_at');
     const slpRt = params.get('slp_rt');
