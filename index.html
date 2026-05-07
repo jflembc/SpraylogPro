@@ -1038,7 +1038,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.06.02</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.06.03</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1130,7 +1130,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.06.02</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.06.03</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
@@ -1262,6 +1262,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <!-- PRODUCTS -->
       <div class="card">
         <div class="sec-label">Products Applied</div>
+        <p id="productsAppliedStats" style="font-size:14px;color:var(--muted);line-height:1.55;margin:-4px 0 14px;">
+          Loading product counts…
+        </p>
         <div id="productRows"></div>
         <button class="btn btn-ghost" onclick="addProductRow()" style="margin-top:4px;">+ Add Product</button>
       </div>
@@ -1399,14 +1402,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <!-- ══ CHEMICALS TAB ══ -->
     <div id="tab-chemicals" class="tab-content hidden">
       <div class="flex-between">
-        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:28px;font-weight:700;color:var(--ink);letter-spacing:-0.5px;">Chemical Library</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:28px;font-weight:700;color:var(--ink);letter-spacing:-0.5px;">My product list</div>
         <button class="btn btn-primary" onclick="openChemicalModal()">+ Add Custom Chemical</button>
       </div>
       <div class="card-dark" style="margin-top:8px;">
-        <input type="text" id="chemSearch" placeholder="Search chemicals..." style="background:var(--soil-mid);border-color:var(--border);color:var(--ink);margin-bottom:14px;" oninput="filterChemicals()">
+        <input type="text" id="chemSearch" placeholder="Search products..." style="background:var(--soil-mid);border-color:var(--border);color:var(--ink);margin-bottom:14px;" oninput="filterChemicals()">
         <div class="data-table-wrap"><table class="data-table" id="chemTable">
           <thead><tr>
-            <th>Product Name</th><th>EPA #</th><th>Active Ingredient</th><th>REI</th><th>Signal</th><th>Type</th>
+            <th>Product Name</th><th>Reg. #</th><th>Active Ingredient</th><th>REI</th><th>Signal</th><th>Type</th>
           </tr></thead>
           <tbody id="chemTableBody"></tbody>
         </table></div>
@@ -1468,17 +1471,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
 
       <div class="card">
-        <div class="sec-label">Chemical Library</div>
-        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Refresh from EPA APPRIL, then import your full chemical library for smart product search in New Application Record.</p>
+        <div class="sec-label">Chemical list</div>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">The shared product list updates automatically each week. Use <strong>Update list now</strong> if you need the latest file sooner. Then use <strong>Load all products</strong> to copy everything into your account so search works in New Record.</p>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
-          <button class="btn btn-outline" onclick="syncChemicalLibraryFromEPA()" id="syncEpaBtn">
-            ↻ Refresh EPA Chemical Library
+          <button class="btn btn-outline" onclick="forceUpdateChemicalListCloud()" id="syncListBtn">
+            ↻ Update list now
           </button>
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="syncEpaStatus"></span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="syncListStatus"></span>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="importChemicalsFromLibrary()" id="importChemBtn">
-            ⬇ Import Full Chemical Library
+            ⬇ Load all products into my account
           </button>
           <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="importChemStatus"></span>
         </div>
@@ -1658,7 +1661,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <h2>Add Custom Chemical</h2>
     <div class="form-group"><label>Product Name</label><input type="text" id="chm_name" placeholder="Product name"></div>
     <div class="form-row c2">
-      <div class="form-group" style="margin:0"><label>EPA Number</label><input type="text" id="chm_epa" placeholder="XXX-XXXX"></div>
+      <div class="form-group" style="margin:0"><label>Registration #</label><input type="text" id="chm_epa" placeholder="XXX-XXXX"></div>
       <div class="form-group" style="margin:0"><label>Active Ingredient</label><input type="text" id="chm_ai" placeholder="Active ingredient"></div>
     </div>
     <div class="form-row c2">
@@ -1695,7 +1698,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 const SUPABASE_URL = 'https://tyttsvngdeitkjttdarp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dHRzdm5nZGVpdGtqdHRkYXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM0MTMsImV4cCI6MjA5MTg2OTQxM30.whG0Kp-ybQEo4vqhlSCUmjJJT5DKOBLqcNms4ngsYF8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_BUILD = '2026.05.06.02';
+const APP_BUILD = '2026.05.06.03';
 
 const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 
@@ -2048,6 +2051,7 @@ async function loadChemicals() {
   const { data } = await sb.from('chemicals').select('*').order('name');
   allChemicals = data || [];
   renderChemicalsTable();
+  updateProductsAppliedStats();
 }
 
 async function loadFields() {
@@ -2081,6 +2085,36 @@ function renderChemicalsTable() {
 }
 
 function filterChemicals() { renderChemicalsTable(); }
+
+async function fetchMasterProductListCount() {
+  const { count, error } = await sb
+    .from('chemical_library')
+    .select('*', { count: 'exact', head: true });
+  if (error) {
+    console.warn('chemical_library count:', error.message);
+    return null;
+  }
+  return typeof count === 'number' ? count : null;
+}
+
+async function updateProductsAppliedStats() {
+  const el = document.getElementById('productsAppliedStats');
+  if (!el) return;
+  const mine = Array.isArray(allChemicals) ? allChemicals.length : 0;
+  el.textContent = 'Loading product counts…';
+  const master = await fetchMasterProductListCount();
+  if (master === null) {
+    el.innerHTML =
+      'Shared <strong>chemical list</strong>: <span style="color:var(--muted);">could not load count (check login or database access).</span> · ' +
+      '<strong>Your products</strong>: <strong>' + mine.toLocaleString() + '</strong>. ' +
+      '<span style="color:var(--muted);">Open Profile → Load all products if search feels short.</span>';
+    return;
+  }
+  el.innerHTML =
+    'Shared <strong>chemical list</strong>: <strong>' + master.toLocaleString() + '</strong> products · ' +
+    '<strong>Your products</strong>: <strong>' + mine.toLocaleString() + '</strong>. ' +
+    '<span style="color:var(--muted);">The picker uses your products — tap Load all products in Profile to match the full list.</span>';
+}
 
 function openChemicalModal() { document.getElementById('chemModal').classList.remove('hidden'); }
 function closeChemModal() { document.getElementById('chemModal').classList.add('hidden'); }
@@ -2313,7 +2347,7 @@ function viewLog(id) {
       <div class="sec-label" style="color:var(--amber);">Products</div>
       ${prods.map(p => `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-family:"",sans-serif;">
         <strong style="color:var(--ink);font-size:15px;">${p.name}</strong>
-        <span style="font-family:monospace;font-size:10px;color:var(--muted);margin-left:8px;">EPA: ${p.epa_number||'—'}</span>
+        <span style="font-family:monospace;font-size:10px;color:var(--muted);margin-left:8px;">Reg.: ${p.epa_number||'—'}</span>
         <span style="font-family:monospace;font-size:10px;color:var(--muted);margin-left:8px;">Rate: ${p.rate||'—'} ${p.unit||''}</span>
       </div>`).join('')}
     </div>
@@ -2442,6 +2476,7 @@ function initNewLogForm() {
   document.getElementById('log_windDir').value = '';
   clearMapCanvas();
   fetchWeather();
+  updateProductsAppliedStats();
 }
 
 function addProductRow(existing) {
@@ -2464,7 +2499,7 @@ function addProductRow(existing) {
     '<label>Product</label>' +
     '<div id="comboContainer_' + idx + '"></div>' +
     '<input type="text" id="customName_' + idx + '" placeholder="Custom product name..." class="hidden" style="margin-top:6px;" value="' + (existing && existing.isCustom ? existing.name : '') + '">' +
-    '<div id="epa_' + idx + '" class="epa-display">EPA #: ' + (existing && existing.epa_number ? existing.epa_number : '—') + '</div>' +
+    '<div id="epa_' + idx + '" class="epa-display">Reg. #: ' + (existing && existing.epa_number ? existing.epa_number : '—') + '</div>' +
     '<div id="labelRate_' + idx + '" style="font-family:monospace;font-size:9px;color:#4A8FA8;margin-top:3px;"></div>' +
     '<div id="ppe_' + idx + '" class="ppe-tags">' + renderPPETags(existing && existing.ppe ? existing.ppe : []) + '</div>' +
     '<div id="signal_' + idx + '" style="font-family:monospace;font-size:9px;font-weight:700;margin-top:4px;" class="signal-' + (existing && existing.signal_word ? existing.signal_word : '') + '">' + (existing && existing.signal_word ? existing.signal_word : '') + '</div>' +
@@ -2493,7 +2528,7 @@ function addProductRow(existing) {
   const comboOptions = allChemicals.map(c => ({
     value: c.id,
     label: c.name,
-    sub: 'EPA: ' + (c.epa_number || 'N/A') + (c.rei_hours ? '  |  REI: ' + c.rei_hours + 'h' : '') + (c.signal_word ? '  |  ' + c.signal_word : ''),
+    sub: 'Reg.: ' + (c.epa_number || 'N/A') + (c.rei_hours ? '  |  REI: ' + c.rei_hours + 'h' : '') + (c.signal_word ? '  |  ' + c.signal_word : ''),
     group: c.is_custom ? 'My Chemicals' : 'System Chemicals',
     epa: c.epa_number || '',
     ppe: c.ppe_requirements || [],
@@ -2503,19 +2538,19 @@ function addProductRow(existing) {
   comboOptions.push({ value: '__custom', label: '+ Enter custom product name', group: 'Custom' });
 
   createCombo('comboContainer_' + idx, comboOptions, {
-    placeholder: 'Search chemicals...',
+    placeholder: 'Search products...',
     value: existing?.chemical_id || '',
     onchange: (value, option) => {
       if (value === '__custom') {
         document.getElementById('customName_' + idx).classList.remove('hidden');
-        document.getElementById('epa_' + idx).textContent = 'EPA #: —';
+        document.getElementById('epa_' + idx).textContent = 'Reg. #: —';
         document.getElementById('ppe_' + idx).innerHTML = '';
         document.getElementById('signal_' + idx).textContent = '';
         return;
       }
       document.getElementById('customName_' + idx).classList.add('hidden');
       if (option) {
-        document.getElementById('epa_' + idx).textContent = 'EPA #: ' + (option.epa || '—');
+        document.getElementById('epa_' + idx).textContent = 'Reg. #: ' + (option.epa || '—');
         document.getElementById('ppe_' + idx).innerHTML = renderPPETags(option.ppe || []);
         const sigEl = document.getElementById('signal_' + idx);
         sigEl.textContent = option.signal || '';
@@ -2530,7 +2565,7 @@ function addProductRow(existing) {
     // Trigger display of EPA/PPE
     const opt = allChemicals.find(c => c.id === existing.chemical_id);
     if (opt) {
-      document.getElementById('epa_' + idx).textContent = 'EPA #: ' + (opt.epa_number || '—');
+      document.getElementById('epa_' + idx).textContent = 'Reg. #: ' + (opt.epa_number || '—');
       document.getElementById('ppe_' + idx).innerHTML = renderPPETags(opt.ppe_requirements || []);
       const sigEl = document.getElementById('signal_' + idx);
       sigEl.textContent = opt.signal_word || '';
@@ -2548,7 +2583,7 @@ function onProductSelect(idx, sel) {
   const customInput = document.getElementById('customName_' + idx);
   if (sel.value === '__custom') {
     customInput.classList.remove('hidden');
-    document.getElementById('epa_' + idx).textContent = 'EPA #: —';
+    document.getElementById('epa_' + idx).textContent = 'Reg. #: —';
     document.getElementById('ppe_' + idx).innerHTML = '';
     document.getElementById('signal_' + idx).textContent = '';
     document.getElementById('labelRate_' + idx).textContent = '';
@@ -2563,7 +2598,7 @@ function onProductSelect(idx, sel) {
   const rateMax = opt.dataset.rateMax;
   const rateUnit = opt.dataset.rateUnit || '';
   const rateNotes = opt.dataset.rateNotes || '';
-  document.getElementById('epa_' + idx).textContent = 'EPA #: ' + epa;
+  document.getElementById('epa_' + idx).textContent = 'Reg. #: ' + epa;
   document.getElementById('ppe_' + idx).innerHTML = renderPPETags(ppe);
   const sigEl = document.getElementById('signal_' + idx);
   sigEl.textContent = signal;
@@ -2976,7 +3011,11 @@ function switchTab(tab) {
   if (mobEl) mobEl.classList.add('active');
   if (tab === 'newlog') {
     if (!editingLogId) initNewLogForm();
-    setTimeout(() => { initMapCanvas(); if(!sigPad) initSignaturePads(); }, 150);
+    setTimeout(() => {
+      updateProductsAppliedStats();
+      initMapCanvas();
+      if (!sigPad) initSignaturePads();
+    }, 150);
   }
   if (tab === 'chemicals') renderChemicalsTable();
   if (tab === 'customers') renderCustomersList();
@@ -3284,7 +3323,7 @@ function renderSummaryTab() {
 }
 
 function buildSummaryCSV(logs) {
-  const rows = [['Date','Field Name','Commodity','Acres','Products','EPA Numbers','Pest Controlled','Wind Speed','Wind Dir','Temp','Start Time','Stop Time','Water/Acre','Legal Description','Applicator','Cert #']];
+  const rows = [['Date','Field Name','Commodity','Acres','Products','Reg. numbers','Pest Controlled','Wind Speed','Wind Dir','Temp','Start Time','Stop Time','Water/Acre','Legal Description','Applicator','Cert #']];
   logs.forEach(l => {
     const prods = (l.products||[]).map(p => p.name).join('; ');
     const epas = (l.products||[]).map(p => p.epa_number).filter(Boolean).join('; ');
@@ -3615,7 +3654,7 @@ function buildFileName(log, ext) {
 }
 
 function buildLogCSV(log) {
-  const prods = (log.products || []).map(p => p.name + ' (EPA:' + (p.epa_number||'N/A') + ') @ ' + p.rate + ' ' + p.unit).join('; ');
+  const prods = (log.products || []).map(p => p.name + ' (Reg.:' + (p.epa_number||'N/A') + ') @ ' + p.rate + ' ' + p.unit).join('; ');
   const rows = [
     ['PESTICIDE APPLICATION RECORD'],
     ['Field Name', log.field_name || ''],
@@ -3831,10 +3870,43 @@ function toggleState(st) {
   sb.from('profiles').update({ registered_states: userProfile.registered_states }).eq('id', currentUser.id);
 }
 
-async function syncChemicalLibraryFromEPA() {
-  const status = document.getElementById('syncEpaStatus');
-  if (status) status.textContent = 'Weekly EPA sync runs automatically on Monday evening.';
-  toast('EPA refresh is automated weekly. Use Import Full Chemical Library to load current products.', 'info');
+async function forceUpdateChemicalListCloud() {
+  if (!currentUser) return;
+  const btn = document.getElementById('syncListBtn');
+  const status = document.getElementById('syncListStatus');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Starting update…';
+  }
+  if (status) status.textContent = 'Requesting cloud refresh…';
+
+  try {
+    const { data, error } = await sb.functions.invoke('trigger-chemical-list-sync', {
+      body: { force: true },
+    });
+    if (error) throw error;
+    if (data && data.error) throw new Error(data.error);
+
+    if (status) {
+      status.textContent =
+        (data && data.message) ||
+        'Update started. Wait a few minutes, then tap Load all products.';
+    }
+    toast('Chemical list update started. Give it a few minutes, then load products.', 'success');
+    setTimeout(() => updateProductsAppliedStats(), 2000);
+  } catch (e) {
+    const msg = e.message || String(e);
+    if (status) {
+      status.textContent =
+        'Could not start update. Deploy the trigger-chemical-list-sync function and check GitHub secrets.';
+    }
+    toast('Update failed: ' + msg, 'warn');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '↻ Update list now';
+    }
+  }
 }
 
 async function importChemicalsFromLibrary(options) {
@@ -3856,49 +3928,66 @@ async function importChemicalsFromLibrary(options) {
 
     if (error) throw error;
     if (!library?.length) {
-      status.textContent = 'No products found in chemical library.';
-      if (!silent) toast('No products available yet. EPA weekly sync may still be running.', 'warn');
+      status.textContent = 'No products found in the shared chemical list.';
+      if (!silent) toast('No products in the shared list yet. Run the cloud sync job or tap Update list now.', 'warn');
+      updateProductsAppliedStats();
       return { imported: 0, total: 0 };
     }
 
-    // Get user's existing chemical names to avoid dupes
+    // Get user's existing rows to avoid dupes (name and registration #)
     const { data: existing } = await sb
       .from('chemicals')
-      .select('name')
+      .select('name, epa_number')
       .eq('owner_id', currentUser.id);
-    const existingNames = new Set((existing || []).map(c => c.name.toLowerCase()));
+    const existingNames = new Set((existing || []).map(c => (c.name || '').toLowerCase()));
+    const existingRegs = new Set(
+      (existing || []).map(c => (c.epa_number || '').toLowerCase()).filter(Boolean)
+    );
 
-    // Filter out dupes
     const toInsert = library
-      .filter(c => !existingNames.has(c.product_name.toLowerCase()))
-      .map(c => ({
-        owner_id: currentUser.id,
-        name: c.product_name,
-        epa_number: c.epa_number || '',
-        active_ingredient: c.active_ingredient || '',
-        signal_word: c.signal_word || '',
-        rei_hours: c.rei_hours || 0,
-        ppe_required: c.ppe || '',
-        category: c.product_type || ''
-      }));
+      .map(c => {
+        const reg = String(c.reg_num || c.epa_number || '').trim();
+        const nm = String(c.product_name || '').trim();
+        if (!nm) return null;
+        return {
+          owner_id: currentUser.id,
+          name: nm,
+          epa_number: reg,
+          active_ingredient: c.active_ingredient || '',
+          signal_word: c.signal_word || '',
+          rei_hours: c.rei_hours || 0,
+          ppe_required: c.ppe || c.ppe_required || '',
+          category: c.product_type || c.category || ''
+        };
+      })
+      .filter(Boolean)
+      .filter(row => {
+        const n = row.name.toLowerCase();
+        const r = (row.epa_number || '').toLowerCase();
+        if (existingNames.has(n)) return false;
+        if (r && existingRegs.has(r)) return false;
+        return true;
+      });
 
     if (!toInsert.length) {
-      status.textContent = `Already have all ${library.length} products.`;
+      status.textContent = `Your account already has these ${library.length} products (by name or registration #).`;
+      await loadChemicals();
       return { imported: 0, total: library.length };
     }
 
-    // Insert in batches of 50
     let imported = 0;
     for (let i = 0; i < toInsert.length; i += 50) {
       const batch = toInsert.slice(i, i + 50);
       const { error: insErr } = await sb.from('chemicals').insert(batch);
-      if (!insErr) imported += batch.length;
+      if (insErr) throw new Error(insErr.message);
+      imported += batch.length;
     }
 
     await loadChemicals();
-    if (!silent) toast(`✓ Imported ${imported} chemicals`);
-    if (autoSeed && imported > 0) status.textContent = `First-time setup complete: ${imported} products loaded.`;
-    status.textContent = `${imported} new products added. ${library.length - imported} already existed.`;
+    if (!silent) toast(`✓ Loaded ${imported} new products into your account`);
+    if (autoSeed && imported > 0) status.textContent = `First-time setup: ${imported} products loaded.`;
+    else status.textContent = `${imported} new products added. Shared list has ${library.length} total.`;
+    updateProductsAppliedStats();
     return { imported, total: library.length };
 
   } catch(e) {
@@ -3906,7 +3995,7 @@ async function importChemicalsFromLibrary(options) {
     throw e;
   } finally {
     btn.disabled = false;
-    btn.textContent = '⬇ Import Full Chemical Library';
+    btn.textContent = '⬇ Load all products into my account';
   }
 }
 
@@ -3994,13 +4083,13 @@ function showFeedbackError(msg) {
 // ══════════════════════════════════════════════════════
 const CHANGELOG = {
   version: APP_BUILD,
-  title: 'Weekly Auto-Sync + First-Time Load',
+  title: 'Product counts & chemical list',
   date: 'May 6, 2026',
   items: [
-    { type: 'new',      text: 'Chemical library now updates automatically each week, so your product list stays fresh.' },
-    { type: 'new',      text: 'First-time users now auto-load products into the app so search works right away.' },
-    { type: 'improved', text: 'Import Full Chemical Library still works anytime if you want to reload products manually.' },
-    { type: 'improved', text: 'Build number and What\'s New were updated for this release.' }
+    { type: 'new',      text: 'New Record now shows how many products are in the shared list and how many are in your account.' },
+    { type: 'new',      text: 'Profile has Update list now to refresh the cloud product file when you need it sooner.' },
+    { type: 'improved', text: 'Load all products does a better job skipping duplicates so big imports finish cleanly.' },
+    { type: 'improved', text: 'We stopped using agency initials in the app — it’s your chemical list and registration numbers now.' }
   ]
 };
 
@@ -4244,7 +4333,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
       <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--amber);margin-bottom:8px;letter-spacing:1px;">WHAT GETS UPLOADED</div>
       <div style="font-size:var(--text-sm);color:var(--ink-2);line-height:1.8;">
         ✓ Applicator name &amp; cert number<br>
-        ✓ Products applied with EPA numbers &amp; rates<br>
+        ✓ Products applied with registration numbers &amp; rates<br>
         ✓ Application date, time, acres, legal description<br>
         ✓ Weather conditions at time of application<br>
         ✓ Pest controlled &amp; commodity
