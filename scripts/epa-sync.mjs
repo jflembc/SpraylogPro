@@ -1,3 +1,13 @@
+/**
+ * EPA APPRIL weekly dump → Supabase chemical_library
+ * Run from GitHub Actions. Requires: exceljs, @supabase/supabase-js
+ *
+ * Env:
+ *   SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
+ *   MANUAL_RUN=1  → skip Monday 7PM ET gate + skip "already synced this week" (for testing)
+ */
+
 import ExcelJS from "exceljs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -40,7 +50,8 @@ function isoWeekKey(d = new Date()) {
   return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
 }
 
-function nyGateAllowsRun() {
+/** Monday 7:00 PM America/New_York */
+function nyMonday7pmGateOpen() {
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     weekday: "short",
@@ -51,28 +62,51 @@ function nyGateAllowsRun() {
   const parts = Object.fromEntries(
     fmt.formatToParts(new Date()).map((p) => [p.type, p.value])
   );
-  const weekday = parts.weekday;
-  const hour = Number(parts.hour);
-  return weekday === "Mon" && hour === 19;
+  return parts.weekday === "Mon" && Number(parts.hour) === 19;
 }
 
+function cellToString(cell) {
+  let v = cell.value;
+  if (v == null) return "";
+  if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+    return String(v);
+  }
+  if (typeof v === "object") {
+    if ("text" in v && v.text != null) return String(v.text);
+    if ("result" in v && v.result != null) return String(v.result);
+    if ("richText" in v && Array.isArray(v.richText)) {
+      return v.richText.map((t) => t.text || "").join("");
+    }
+    return String(v);
+  }
+  return String(v);
+}
+
+/**
+ * Row for chemical_library. Unique key in your DB: reg_num (see UNIQUE constraint).
+ */
 function mapRow(r) {
-  const epa = String(
+  const regNum = String(
     getLoose(r, "reg_num", "registration number", "registration_number") || ""
   ).trim();
-  const name = String(getLoose(r, "product_name", "product name") || "").trim();
-  if (!epa || !name) return null;
+
+  const productName = String(getLoose(r, "product_name", "product name") || "").trim();
+
+  if (!regNum || !productName) return null;
+
+  const activeIngredient = String(
+    getLoose(r, "ais", "active ingredient(s)", "active ingredients", "active_ingredient") || ""
+  ).trim();
 
   return {
-    epa_number: epa,
-    reg_num: epa,
-    product_name: name,
-    active_ingredient: String(
-      getLoose(r, "ais", "active ingredient(s)", "active ingredients") || ""
-    ).trim(),
+    reg_num: regNum,
+    epa_number: regNum,
+    product_name: productName,
+    active_ingredient: activeIngredient,
+    active_ingredients: activeIngredient,
     signal_word: String(getLoose(r, "signal_word", "signal word") || "").trim(),
     product_type: String(
-      getLoose(r, "pesticide_type", "pesticide type", "reg_type", "reg type") || ""
+      getLoose(r, "pesticide_type", "pesticide type", "product_type") || ""
     ).trim(),
     pesticide_type: String(getLoose(r, "pesticide_type", "pesticide type") || "").trim(),
     status_group: String(getLoose(r, "status_group", "status group") || "").trim(),
@@ -101,14 +135,7 @@ async function loadRowsFromXlsx(buffer) {
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
     const vals = [];
     row.eachCell({ includeEmpty: true }, (cell) => {
-      let v = cell.value;
-      if (v && typeof v === "object") {
-        if ("text" in v) v = v.text;
-        else if ("result" in v) v = v.result;
-        else if ("richText" in v) v = v.richText?.map((t) => t.text).join("") ?? "";
-        else v = String(v);
-      }
-      vals.push(v ?? "");
+      vals.push(cellToString(cell));
     });
 
     if (rowNumber === 1) {
@@ -130,24 +157,26 @@ async function loadRowsFromXlsx(buffer) {
 async function run() {
   const weekKey = isoWeekKey();
 
-  if (!MANUAL_RUN && !nyGateAllowsRun()) {
-    console.log("Skipping: outside Monday 7:00 PM America/New_York window.");
-    return;
-  }
+  if (!MANUAL_RUN) {
+    if (!nyMonday7pmGateOpen()) {
+      console.log("Skipping: not Monday 7:00 PM America/New_York.");
+      return;
+    }
 
-  if (MANUAL_RUN) console.log("Manual run: bypassing time gate.");
+    const { data: done, error: dupErr } = await sb
+      .from("chemical_sync_runs")
+      .select("id")
+      .eq("week_key", weekKey)
+      .eq("status", "success")
+      .limit(1);
 
-  const { data: done, error: dupErr } = await sb
-    .from("chemical_sync_runs")
-    .select("id")
-    .eq("week_key", weekKey)
-    .eq("status", "success")
-    .limit(1);
-
-  if (dupErr) throw dupErr;
-  if (!MANUAL_RUN && done?.length) {
-    console.log("Already synced this week:", weekKey);
-    return;
+    if (dupErr) throw dupErr;
+    if (done?.length) {
+      console.log("Already synced this week:", weekKey);
+      return;
+    }
+  } else {
+    console.log("MANUAL_RUN=1 → bypass time gate and weekly duplicate check.");
   }
 
   const { data: runRow, error: runErr } = await sb
@@ -187,10 +216,11 @@ async function run() {
 
     let upserted = 0;
     const BATCH = 500;
+
     for (let i = 0; i < mapped.length; i += BATCH) {
       const batch = mapped.slice(i, i + BATCH);
       const { error } = await sb.from("chemical_library").upsert(batch, {
-        onConflict: "epa_number",
+        onConflict: "reg_num",
       });
       if (error) throw error;
       upserted += batch.length;
