@@ -1,0 +1,36 @@
+name: EPA Weekly Sync
+
+on:
+  schedule:
+    - cron: "0 23 * * 1"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force run (bypass Monday 7 PM ET gate)"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install --no-cache-dir openpyxl supabase requests
+
+      - name: Run EPA sync
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.force == true && '1' || '') || '' }}
+        run: python scripts/epa_sync.py
