@@ -33,5 +33,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.force && '1' || '' }}
+          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
         run: node scripts/epa-sync.mjs
