@@ -2,31 +2,36 @@ name: EPA Weekly Sync
 
 on:
   schedule:
-    - cron: "0 23 * * 1"  # Every Monday at 7PM ET (23:00 UTC)
+    # Every Monday 7:00 PM Eastern = 23:00 UTC (standard time). Adjust when you switch to DST if you need strict ET year-round.
+    - cron: "0 23 * * 1"
   workflow_dispatch:
     inputs:
       force:
-        description: 'Force run (bypasses time gate)'
+        description: "Force run (bypass time gate)"
         required: false
-        default: 'true'
+        default: true
+        type: boolean
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
 
       - name: Install dependencies
-        - run: npm i exceljs @supabase/supabase-js
+        run: npm i exceljs @supabase/supabase-js
 
       - name: Run EPA sync
-        run: node scripts/epa-sync.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          MANUAL_RUN: "true"
+          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.force && '1' || '' }}
+        run: node scripts/epa-sync.mjs
