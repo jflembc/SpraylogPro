@@ -1472,12 +1472,23 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
       <div class="card">
         <div class="sec-label">Chemical list</div>
-        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">The shared product list updates automatically each week. Use <strong>Update list now</strong> if you need the latest file sooner. Then use <strong>Load all products</strong> to copy everything into your account so search works in New Record.</p>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6;">The shared product list updates automatically each week (GitHub Actions → Supabase). Use <strong>Update list now</strong> only if you need the EPA file sooner. Then use <strong>Load all products</strong> to copy the shared list into your account for New Record search.</p>
+        <p id="chemicalLibrarySyncMeta" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);margin:0 0 14px;line-height:1.5;">Loading sync status…</p>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
           <button class="btn btn-outline" onclick="forceUpdateChemicalListCloud()" id="syncListBtn">
             ↻ Update list now
           </button>
           <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="syncListStatus"></span>
+        </div>
+        <div id="chemicalSyncProgressWrap" class="hidden" style="margin:0 0 14px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--ink);" id="chemicalSyncProgressPct">0%</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-align:right;" id="chemicalSyncProgressEta">Est. remaining: —</span>
+          </div>
+          <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="EPA library sync progress" id="chemicalSyncProgressBarTrack" style="height:10px;background:rgba(61,61,61,0.12);border-radius:999px;overflow:hidden;">
+            <div id="chemicalSyncProgressBarFill" style="height:100%;width:0%;background:var(--accent, #F26522);border-radius:999px;transition:width 0.55s ease-out;"></div>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin:8px 0 0;line-height:1.45;font-family:'IBM Plex Mono',monospace;">Percent and time are <strong>estimates</strong> (typical full run ~22 min). The server does not report live EPA download progress.</p>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="importChemicalsFromLibrary()" id="importChemBtn">
@@ -1883,6 +1894,10 @@ async function doSignup() {
 }
 
 async function doLogout() {
+  stopChemicalSyncPoll();
+  stopChemicalSyncProgressUiTick();
+  resetChemicalSyncProgressState();
+  showChemicalSyncProgress(false);
   await sb.auth.signOut();
   currentUser = null; userProfile = null;
   document.getElementById('app').classList.add('hidden');
@@ -1898,6 +1913,7 @@ async function bootApp(user) {
     await loadProfile();
     await loadChemicals();
     await ensureChemicalsSeeded();
+    refreshChemicalLibrarySyncBanner();
     await loadFields();
     await loadCustomers();
     await loadLogs();
@@ -3023,6 +3039,7 @@ function switchTab(tab) {
   if (tab === 'summary') { populateYearPicker(); renderSummaryTab(); }
   if (tab === 'profile') {
     renderStatePicker();
+    refreshChemicalLibrarySyncBanner();
     // Reinit signature pad after layout settles on mobile
     setTimeout(() => { profileSigPad = null; initSignaturePads(); }, 300);
   }
@@ -3870,15 +3887,347 @@ function toggleState(st) {
   sb.from('profiles').update({ registered_states: userProfile.registered_states }).eq('id', currentUser.id);
 }
 
+// Poll chemical_sync_runs (written by scripts/epa-sync.mjs on GitHub Actions) for completion UX.
+let chemicalSyncPollTimer = null;
+let chemicalSyncProgressUiTimer = null;
+
+/** Typical wall-clock for EPA download + full upsert (heuristic for ETA only). */
+const CHEMICAL_SYNC_ESTIMATE_MS = 22 * 60 * 1000;
+
+const chemicalSyncProgressState = {
+  phase: 'idle',
+  clickAt: 0,
+  runningAt: null,
+};
+
+function resetChemicalSyncProgressState() {
+  chemicalSyncProgressState.phase = 'idle';
+  chemicalSyncProgressState.clickAt = 0;
+  chemicalSyncProgressState.runningAt = null;
+}
+
+function showChemicalSyncProgress(visible) {
+  const wrap = document.getElementById('chemicalSyncProgressWrap');
+  const fill = document.getElementById('chemicalSyncProgressBarFill');
+  const track = document.getElementById('chemicalSyncProgressBarTrack');
+  if (!wrap) return;
+  wrap.classList.toggle('hidden', !visible);
+  if (!visible) {
+    if (fill) {
+      fill.style.width = '0%';
+      fill.style.background = 'var(--accent, #F26522)';
+    }
+    if (track) track.setAttribute('aria-valuenow', '0');
+  }
+}
+
+function stopChemicalSyncProgressUiTick() {
+  if (chemicalSyncProgressUiTimer) {
+    clearInterval(chemicalSyncProgressUiTimer);
+    chemicalSyncProgressUiTimer = null;
+  }
+}
+
+function startChemicalSyncProgressUiTick() {
+  stopChemicalSyncProgressUiTick();
+  chemicalSyncProgressUiTimer = setInterval(updateChemicalSyncProgressVisual, 1000);
+  updateChemicalSyncProgressVisual();
+}
+
+function formatEtaSeconds(sec) {
+  if (!Number.isFinite(sec) || sec <= 0) return 'under a minute';
+  if (sec < 55) return `~${Math.max(1, Math.round(sec))} sec`;
+  const m = Math.round(sec / 60);
+  if (m === 1) return '~1 min';
+  if (m < 90) return `~${m} min`;
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return mm ? `~${h} h ${mm} min` : `~${h} h`;
+}
+
+function updateChemicalSyncProgressVisual() {
+  const fill = document.getElementById('chemicalSyncProgressBarFill');
+  const pctEl = document.getElementById('chemicalSyncProgressPct');
+  const etaEl = document.getElementById('chemicalSyncProgressEta');
+  const track = document.getElementById('chemicalSyncProgressBarTrack');
+  if (!fill || !pctEl || !etaEl) return;
+
+  const phase = chemicalSyncProgressState.phase;
+  if (phase === 'idle') return;
+
+  const now = Date.now();
+  const clickAt = chemicalSyncProgressState.clickAt || now;
+  const runningAt = chemicalSyncProgressState.runningAt;
+
+  let pct = 0;
+  let etaSec = 0;
+
+  if (phase === 'queued') {
+    const e = now - clickAt;
+    pct = Math.min(10, 2.5 + (e / 20000) * 7.5);
+    etaSec = Math.max(40, (CHEMICAL_SYNC_ESTIMATE_MS - e * 0.35) / 1000);
+  } else if (phase === 'waiting_gh') {
+    const e = now - clickAt;
+    pct = Math.min(22, 10 + (e / 90000) * 12);
+    etaSec = Math.max(50, (CHEMICAL_SYNC_ESTIMATE_MS * 0.95 - e * 0.42) / 1000);
+  } else if (phase === 'running') {
+    const runStart = runningAt || clickAt;
+    const e = now - runStart;
+    const stretch = e > CHEMICAL_SYNC_ESTIMATE_MS ? CHEMICAL_SYNC_ESTIMATE_MS + (e - CHEMICAL_SYNC_ESTIMATE_MS) * 0.12 : CHEMICAL_SYNC_ESTIMATE_MS;
+    pct = 22 + 72 * (1 - Math.exp(-e / (stretch * 0.52)));
+    pct = Math.min(94, pct);
+    etaSec = Math.max(25, (stretch * 0.88 - e) / 1000);
+    if (e > CHEMICAL_SYNC_ESTIMATE_MS * 1.35) {
+      etaSec = Math.max(45, (CHEMICAL_SYNC_ESTIMATE_MS * 0.35) / 1000);
+    }
+  } else if (phase === 'success') {
+    pct = 100;
+    etaSec = 0;
+  } else if (phase === 'failed') {
+    pct = 100;
+    etaSec = 0;
+  } else if (phase === 'timeout') {
+    pct = 94;
+    etaSec = 0;
+  }
+
+  const pctRounded = Math.round(pct * 10) / 10;
+  fill.style.width = `${Math.min(100, pct)}%`;
+  if (track) track.setAttribute('aria-valuenow', String(Math.round(Math.min(100, pct))));
+
+  pctEl.textContent = `${pctRounded}%`;
+  if (phase === 'success') {
+    etaEl.textContent = 'Complete — shared library updated';
+  } else if (phase === 'failed') {
+    etaEl.textContent = 'Stopped — see message above';
+  } else if (phase === 'timeout') {
+    etaEl.textContent = 'Still running? Check GitHub Actions';
+  } else {
+    etaEl.textContent = `Est. remaining: ${formatEtaSeconds(etaSec)}`;
+  }
+}
+
+function setChemicalSyncProgressPhase(phase) {
+  chemicalSyncProgressState.phase = phase;
+  updateChemicalSyncProgressVisual();
+}
+
+function stopChemicalSyncPoll() {
+  if (chemicalSyncPollTimer) {
+    clearTimeout(chemicalSyncPollTimer);
+    chemicalSyncPollTimer = null;
+  }
+}
+
+function formatSyncWhen(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  } catch (_) {
+    return String(iso);
+  }
+}
+
+async function getLatestChemicalSyncRunId() {
+  const { data } = await sb
+    .from('chemical_sync_runs')
+    .select('id')
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.id ?? 0;
+}
+
+async function refreshChemicalLibrarySyncBanner() {
+  const el = document.getElementById('chemicalLibrarySyncMeta');
+  if (!el) return;
+  if (!currentUser) {
+    el.textContent = '';
+    return;
+  }
+  el.style.color = '';
+  const { data: run, error } = await sb
+    .from('chemical_sync_runs')
+    .select('id,status,finished_at,rows_upserted,rows_fetched,message,week_key')
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    el.textContent =
+      'Could not read EPA sync status. In Supabase → Table Editor → chemical_sync_runs → RLS, allow SELECT for the authenticated role (read-only is enough).';
+    el.style.color = 'var(--danger, #b91c1c)';
+    return;
+  }
+  if (!run) {
+    el.textContent = 'No EPA sync runs recorded yet. After the first GitHub job, last run time will appear here.';
+    return;
+  }
+  if (run.status === 'running') {
+    el.textContent =
+      'EPA library sync is running now (large EPA download + import). This page will update when it finishes; typical time is about 10–30 minutes.';
+    return;
+  }
+  if (run.status === 'failed') {
+    const msg = (run.message || 'Unknown error').slice(0, 220);
+    el.textContent = `Last sync attempt failed (${formatSyncWhen(run.finished_at)}): ${msg}`;
+    el.style.color = 'var(--danger, #b91c1c)';
+    return;
+  }
+  if (run.status === 'success' && run.finished_at) {
+    const n = run.rows_upserted != null ? Number(run.rows_upserted) : null;
+    const nStr = n != null && !Number.isNaN(n) ? n.toLocaleString() : '—';
+    el.textContent = `Last successful EPA library sync: ${formatSyncWhen(run.finished_at)} · ${nStr} products in the shared list${run.week_key ? ' · week ' + run.week_key : ''}.`;
+    return;
+  }
+  el.textContent = 'Sync status is available; last run has no finish timestamp yet.';
+}
+
+function startChemicalSyncCompletionPoll(priorRunId) {
+  stopChemicalSyncPoll();
+  const status = document.getElementById('syncListStatus');
+  let attempts = 0;
+  const maxAttempts = 160;
+  const intervalMs = 12000;
+  let ticking = false;
+
+  const scheduleNext = (fn, delay) => {
+    chemicalSyncPollTimer = setTimeout(fn, delay);
+  };
+
+  const tick = async () => {
+    if (ticking) return;
+    ticking = true;
+    try {
+      attempts += 1;
+      if (attempts > maxAttempts) {
+        stopChemicalSyncPoll();
+        chemicalSyncProgressState.phase = 'timeout';
+        updateChemicalSyncProgressVisual();
+        stopChemicalSyncProgressUiTick();
+        if (status) {
+          status.textContent =
+            'Still waiting after ~32 min. Open GitHub → Actions, or refresh this tab and check the status line above.';
+        }
+        toast('EPA sync is taking longer than usual. Check GitHub Actions or Profile again later.', 'warn');
+        await refreshChemicalLibrarySyncBanner();
+        setTimeout(() => {
+          const fill = document.getElementById('chemicalSyncProgressBarFill');
+          if (fill) fill.style.background = 'var(--accent, #F26522)';
+          showChemicalSyncProgress(false);
+          resetChemicalSyncProgressState();
+        }, 8000);
+        return;
+      }
+
+      const { data: run, error } = await sb
+        .from('chemical_sync_runs')
+        .select('id,status,finished_at,rows_upserted,message')
+        .gt('id', priorRunId)
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        if (status) status.textContent = 'Could not poll sync status (database permission).';
+        scheduleNext(tick, intervalMs);
+        return;
+      }
+
+      if (!run) {
+        chemicalSyncProgressState.phase = 'waiting_gh';
+        updateChemicalSyncProgressVisual();
+        if (status) status.textContent = 'Waiting for GitHub to start the EPA job…';
+        scheduleNext(tick, intervalMs);
+        return;
+      }
+      if (run.status === 'running') {
+        if (!chemicalSyncProgressState.runningAt) chemicalSyncProgressState.runningAt = Date.now();
+        chemicalSyncProgressState.phase = 'running';
+        updateChemicalSyncProgressVisual();
+        if (status) {
+          status.textContent =
+            'EPA download / import running… (often 10–30 min). This line updates when finished.';
+        }
+        scheduleNext(tick, intervalMs);
+        return;
+      }
+      if (run.status === 'success') {
+        stopChemicalSyncPoll();
+        chemicalSyncProgressState.phase = 'success';
+        updateChemicalSyncProgressVisual();
+        stopChemicalSyncProgressUiTick();
+        const n = run.rows_upserted != null ? Number(run.rows_upserted) : 0;
+        if (status) {
+          status.textContent = `Complete · ${n.toLocaleString()} products · ${formatSyncWhen(run.finished_at)}`;
+        }
+        toast(
+          'EPA chemical library sync finished. Tap Load all products if you want your account list refreshed.',
+          'success'
+        );
+        await refreshChemicalLibrarySyncBanner();
+        updateProductsAppliedStats();
+        setTimeout(() => {
+          const fill = document.getElementById('chemicalSyncProgressBarFill');
+          if (fill) fill.style.background = 'var(--accent, #F26522)';
+          showChemicalSyncProgress(false);
+          resetChemicalSyncProgressState();
+        }, 5200);
+        return;
+      }
+      if (run.status === 'failed') {
+        stopChemicalSyncPoll();
+        chemicalSyncProgressState.phase = 'failed';
+        const fill = document.getElementById('chemicalSyncProgressBarFill');
+        if (fill) fill.style.background = 'var(--danger, #b91c1c)';
+        updateChemicalSyncProgressVisual();
+        stopChemicalSyncProgressUiTick();
+        const msg = (run.message || 'failed').slice(0, 200);
+        if (status) status.textContent = 'Sync failed: ' + msg;
+        toast('EPA sync failed. See status text or GitHub Actions logs.', 'warn');
+        await refreshChemicalLibrarySyncBanner();
+        setTimeout(() => {
+          if (fill) fill.style.background = 'var(--accent, #F26522)';
+          showChemicalSyncProgress(false);
+          resetChemicalSyncProgressState();
+        }, 7000);
+        return;
+      }
+
+      scheduleNext(tick, intervalMs);
+    } finally {
+      ticking = false;
+    }
+  };
+
+  scheduleNext(tick, 4000);
+}
+
 async function forceUpdateChemicalListCloud() {
   if (!currentUser) return;
+  stopChemicalSyncPoll();
+  stopChemicalSyncProgressUiTick();
   const btn = document.getElementById('syncListBtn');
   const status = document.getElementById('syncListStatus');
+
+  resetChemicalSyncProgressState();
+  chemicalSyncProgressState.clickAt = Date.now();
+  chemicalSyncProgressState.phase = 'queued';
+  showChemicalSyncProgress(true);
+  startChemicalSyncProgressUiTick();
+
   if (btn) {
     btn.disabled = true;
     btn.textContent = 'Starting update…';
   }
   if (status) status.textContent = 'Requesting cloud refresh…';
+
+  let priorRunId = 0;
+  try {
+    priorRunId = await getLatestChemicalSyncRunId();
+  } catch (_) {
+    priorRunId = 0;
+  }
 
   try {
     const { data, error } = await sb.functions.invoke('trigger-chemical-list-sync', {
@@ -3905,15 +4254,23 @@ async function forceUpdateChemicalListCloud() {
       throw new Error(msg);
     }
 
+    chemicalSyncProgressState.phase = 'waiting_gh';
+    updateChemicalSyncProgressVisual();
+
     if (status) {
       status.textContent =
-        (data && data.message) ||
-        'Update started. Wait a few minutes, then tap Load all products.';
+        (data && data.message) || 'Job queued — watching for completion…';
     }
-    toast('Chemical list update started. Give it a few minutes, then load products.', 'success');
+    toast('EPA sync job started. This page will show when the shared library finishes updating.', 'success');
     setTimeout(() => updateProductsAppliedStats(), 2000);
+    startChemicalSyncCompletionPoll(priorRunId);
   } catch (e) {
     const msg = e.message || String(e);
+    stopChemicalSyncProgressUiTick();
+    const fill = document.getElementById('chemicalSyncProgressBarFill');
+    if (fill) fill.style.background = 'var(--accent, #F26522)';
+    showChemicalSyncProgress(false);
+    resetChemicalSyncProgressState();
     if (status) {
       status.textContent =
         msg ||
