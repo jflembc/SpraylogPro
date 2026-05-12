@@ -3884,8 +3884,26 @@ async function forceUpdateChemicalListCloud() {
     const { data, error } = await sb.functions.invoke('trigger-chemical-list-sync', {
       body: { force: true },
     });
-    if (error) throw error;
-    if (data && data.error) throw new Error(data.error);
+    if (data && data.error) {
+      const detail = data.detail ? ` ${data.detail}` : '';
+      throw new Error(String(data.error) + detail);
+    }
+    if (error) {
+      let msg = error.message || String(error);
+      const ctx = error.context;
+      if (ctx && typeof ctx === 'object') {
+        const body = ctx.body ?? ctx.msg;
+        if (typeof body === 'string') {
+          try {
+            const j = JSON.parse(body);
+            if (j && j.error) msg = j.detail ? `${j.error}: ${j.detail}` : String(j.error);
+          } catch (_) {
+            if (body) msg = body.slice(0, 300);
+          }
+        }
+      }
+      throw new Error(msg);
+    }
 
     if (status) {
       status.textContent =
@@ -3898,7 +3916,8 @@ async function forceUpdateChemicalListCloud() {
     const msg = e.message || String(e);
     if (status) {
       status.textContent =
-        'Could not start update. Deploy the trigger-chemical-list-sync function and check GitHub secrets.';
+        msg ||
+        'Could not start update. Deploy trigger-chemical-list-sync and set GITHUB_DISPATCH_TOKEN.';
     }
     toast('Update failed: ' + msg, 'warn');
   } finally {
