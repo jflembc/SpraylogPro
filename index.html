@@ -560,6 +560,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 }
 .state-pill:hover { border-color: var(--orange); color: var(--orange); }
 .state-pill.active { background: var(--orange); border-color: var(--orange); color: #fff; }
+.state-picker-grid{display:flex;flex-wrap:wrap;gap:8px;max-width:920px;}
 
 /* ══ FEEDBACK BUTTON ══ */
 #feedbackBtn {
@@ -1047,7 +1048,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.12.01</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.12.02</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1099,7 +1100,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div class="form-row c2">
           <div class="form-group" style="margin:0"><label>Certification Number</label><input type="text" id="su_cert" placeholder="ND-2024-XXXXX"></div>
           <div class="form-group" style="margin:0">
-            <label>Mode</label>
+            <label>Account type</label>
             <select id="su_mode">
               <option value="own_farm">Own Farm</option>
               <option value="custom_applicator">Custom Applicator</option>
@@ -1139,7 +1140,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.12.01</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.12.02</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
@@ -1241,6 +1242,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <button class="btn btn-outline btn-sm" onclick="printLog()">Print / PDF</button>
         </div>
       </div>
+      <p id="newLogStateFilterHint" style="font-size:13px;color:var(--muted);margin:-6px 0 14px;line-height:1.55;display:none;"></p>
 
       <!-- CUSTOMER BAR (custom applicator mode) -->
       <div id="customerBar" class="customer-bar hidden">
@@ -1451,7 +1453,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div class="sec-label">Personal & Contact</div>
         <div class="form-row c2">
           <div class="form-group" style="margin:0"><label>Full Name</label><input type="text" id="pr_name" placeholder="John Anderson"></div>
-          <div class="form-group" style="margin:0"><label>Mode</label>
+          <div class="form-group" style="margin:0"><label>Account type</label>
             <select id="pr_mode" onchange="onModeChange()">
               <option value="own_farm">Own Farm</option>
               <option value="custom_applicator">Custom Applicator</option>
@@ -1465,6 +1467,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
         <div class="form-row c2">
           <div class="form-group" style="margin:0"><label>ZIP</label><input type="text" id="pr_zip"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-label">States where you operate</div>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Select each state where you apply pesticides. When state label data is loaded in the database, the product picker on <strong>New Record</strong> lists only chemicals that appear on those state lists (you can still add a custom product). Use <strong>Import state labels into my list</strong> below to copy missing products into My Chemicals.</p>
+        <div id="statePickerGrid" class="state-picker-grid"></div>
+        <p id="stateApprovalMeta" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:12px;line-height:1.55;">Loading…</p>
+        <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="importStateLabelsToMyChemicals()" id="importStateLabelsBtn">Import state labels into my list</button>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);" id="importStateLabelsStatus"></span>
         </div>
       </div>
 
@@ -1742,7 +1755,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 const SUPABASE_URL = 'https://tyttsvngdeitkjttdarp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dHRzdm5nZGVpdGtqdHRkYXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM0MTMsImV4cCI6MjA5MTg2OTQxM30.whG0Kp-ybQEo4vqhlSCUmjJJT5DKOBLqcNms4ngsYF8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_BUILD = '2026.05.12.01';
+const APP_BUILD = '2026.05.12.02';
 
 const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 
@@ -1919,7 +1932,8 @@ async function doSignup() {
       cert_number: document.getElementById('su_cert').value.trim(),
       cert_issued: document.getElementById('su_certIssued').value || null,
       cert_expires: document.getElementById('su_certExpires').value || null,
-      mode: document.getElementById('su_mode').value
+      mode: document.getElementById('su_mode').value,
+      registered_states: []
     });
     authMsg('Account created! Signing you in...', 'success');
     setTimeout(() => doLogin(), 1200);
@@ -1944,6 +1958,7 @@ async function bootApp(user) {
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     await loadProfile();
+    await loadStateApprovals();
     await loadChemicals();
     await ensureChemicalsSeeded();
     refreshChemicalLibrarySyncBanner();
@@ -1983,6 +1998,7 @@ async function loadProfile() {
     if (error) { console.warn('Profile load error:', error.message); }
     userProfile = data || {};
     if (!data) return;
+    if (!Array.isArray(userProfile.registered_states)) userProfile.registered_states = [];
     updateModeUI(userProfile.mode || 'own_farm');
     if (userProfile.signature_data) {
       document.getElementById('sigExisting').classList.remove('hidden');
@@ -2025,7 +2041,8 @@ async function saveProfile() {
     growing_season_start: parseInt(document.getElementById('pr_seasonStart').value) || 3,
     growing_season_end: parseInt(document.getElementById('pr_seasonEnd').value) || 11,
     cert_issued: document.getElementById('pr_certIssued').value || null,
-    cert_expires: document.getElementById('pr_certExpires').value || null
+    cert_expires: document.getElementById('pr_certExpires').value || null,
+    registered_states: userProfile.registered_states || []
   };
   const { error } = await sb.from('profiles').upsert(updates);
   if (error) { alert('Save failed: ' + error.message); return; }
@@ -2094,13 +2111,220 @@ function checkCertExpiry() {
 }
 
 // ══════════════════════════════════════════════════════
-// CHEMICALS
+// CHEMICALS & STATE LABEL APPROVALS
 // ══════════════════════════════════════════════════════
+let stateApprovalIndex = null;
+let _stateFilterZeroWarned = false;
+
+function normalizeRegToken(str) {
+  const m = String(str || '').match(/\b\d{3,5}-\d{2,3}(?:-\d+)?\b/i);
+  return m ? m[0].toLowerCase() : '';
+}
+
+function normalizeNameKey(str) {
+  return String(str || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 120);
+}
+
+function chemicalAllowedForOperatingStates(chem) {
+  if (!stateApprovalIndex || !stateApprovalIndex.active) return true;
+  const states = userProfile?.registered_states || [];
+  if (!states.length) return true;
+  const reg = normalizeRegToken(chem.epa_number);
+  const nameKey = normalizeNameKey(chem.name);
+  return states.some((st) => {
+    const b = stateApprovalIndex.byState[st];
+    if (!b) return false;
+    if (reg && b.regs.has(reg)) return true;
+    if (nameKey && b.names.has(nameKey)) return true;
+    return false;
+  });
+}
+
+function getChemicalsForProductPicker(extraChemId) {
+  const all = allChemicals || [];
+  let list = all.filter((c) => chemicalAllowedForOperatingStates(c));
+  if (extraChemId) {
+    const ex = all.find((c) => c.id === extraChemId);
+    if (ex && !list.some((x) => x.id === ex.id)) list = [ex, ...list];
+  }
+  if (stateApprovalIndex && stateApprovalIndex.active && list.length === 0 && all.length) {
+    if (!_stateFilterZeroWarned) {
+      _stateFilterZeroWarned = true;
+      toast(
+        'No chemicals matched your state label lists. Showing full list. Try Import state labels into my list or check EPA numbers.',
+        'warn'
+      );
+    }
+    return all;
+  }
+  return list.length ? list : all;
+}
+
+function updateNewLogStateHint() {
+  const hintEl = document.getElementById('newLogStateFilterHint');
+  if (!hintEl) return;
+  const states = (userProfile?.registered_states || []).filter(Boolean);
+  if (!stateApprovalIndex || !stateApprovalIndex.active || !states.length) {
+    hintEl.style.display = 'none';
+    hintEl.textContent = '';
+    return;
+  }
+  hintEl.style.display = 'block';
+  hintEl.textContent =
+    'Operating states: ' +
+    states.join(', ') +
+    '. Product search lists chemicals that appear on those state label exports (custom products still allowed).';
+}
+
+async function loadStateApprovals() {
+  _stateFilterZeroWarned = false;
+  const metaEl = document.getElementById('stateApprovalMeta');
+  stateApprovalIndex = { active: false, byState: {}, rowCount: 0 };
+
+  const states = (userProfile?.registered_states || []).filter(Boolean);
+  if (!states.length) {
+    if (metaEl)
+      metaEl.textContent =
+        'Select states where you operate. After state_label_products is populated, the New Record picker can filter to those labels.';
+    updateNewLogStateHint();
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('state_label_products')
+    .select('state_code,product_name,reg_normalized')
+    .in('state_code', states);
+
+  if (error) {
+    console.warn('state_label_products:', error.message);
+    if (metaEl)
+      metaEl.textContent =
+        'Could not load state_label_products: ' +
+        error.message +
+        '. Apply the latest Supabase migration; picker is not filtered.';
+    updateNewLogStateHint();
+    return;
+  }
+
+  const rows = data || [];
+  stateApprovalIndex.rowCount = rows.length;
+
+  if (!rows.length) {
+    if (metaEl)
+      metaEl.textContent =
+        'No rows in state_label_products for ' +
+        states.join(', ') +
+        '. Picker shows all chemicals. Load exports with scripts/import-kansas-md.mjs (service role).';
+    updateNewLogStateHint();
+    return;
+  }
+
+  stateApprovalIndex.active = true;
+  states.forEach((st) => {
+    stateApprovalIndex.byState[st] = { regs: new Set(), names: new Set() };
+  });
+  rows.forEach((r) => {
+    const st = r.state_code;
+    if (!stateApprovalIndex.byState[st]) stateApprovalIndex.byState[st] = { regs: new Set(), names: new Set() };
+    const rn = String(r.reg_normalized || '').trim().toLowerCase();
+    if (rn) stateApprovalIndex.byState[st].regs.add(rn);
+    const nk = normalizeNameKey(r.product_name);
+    if (nk) stateApprovalIndex.byState[st].names.add(nk);
+  });
+
+  if (metaEl)
+    metaEl.textContent =
+      'Loaded ' +
+      rows.length +
+      ' state label row(s) for ' +
+      states.join(', ') +
+      '. New Record product search is filtered to those lists (custom products still allowed).';
+
+  updateNewLogStateHint();
+}
+
+async function importStateLabelsToMyChemicals() {
+  if (!currentUser) return;
+  const btn = document.getElementById('importStateLabelsBtn');
+  const status = document.getElementById('importStateLabelsStatus');
+  const states = (userProfile?.registered_states || []).filter(Boolean);
+  if (!states.length) {
+    toast('Select at least one operating state first.', 'warn');
+    return;
+  }
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Working…';
+  try {
+    const { data: rows, error } = await sb.from('state_label_products').select('*').in('state_code', states);
+    if (error) throw error;
+    if (!rows?.length) {
+      if (status) status.textContent = 'No state rows for those states.';
+      toast('Nothing to import — load state_label_products first.', 'warn');
+      return;
+    }
+    const { data: existing } = await sb.from('chemicals').select('name, epa_number').eq('owner_id', currentUser.id);
+    const existingNames = new Set((existing || []).map((c) => (c.name || '').toLowerCase()));
+    const existingRegs = new Set((existing || []).map((c) => (c.epa_number || '').toLowerCase()).filter(Boolean));
+
+    const toInsert = [];
+    for (const r of rows) {
+      const nm = String(r.product_name || '').trim();
+      if (!nm) continue;
+      const reg = String(r.reg_raw || r.reg_normalized || '').trim();
+      const nl = nm.toLowerCase();
+      const rl = reg.toLowerCase();
+      if (existingNames.has(nl)) continue;
+      if (rl && existingRegs.has(rl)) continue;
+      existingNames.add(nl);
+      if (rl) existingRegs.add(rl);
+      toInsert.push({
+        owner_id: currentUser.id,
+        name: nm,
+        epa_number: reg,
+        active_ingredient: String(r.active_ingredient || '').trim(),
+        rei_hours: 0,
+        signal_word: '',
+        ppe_required: '',
+        category: 'State label: ' + r.state_code,
+      });
+    }
+
+    if (!toInsert.length) {
+      if (status) status.textContent = 'Your list already includes these products.';
+      toast('No new products to add.', 'info');
+      return;
+    }
+
+    let imported = 0;
+    for (let i = 0; i < toInsert.length; i += 50) {
+      const batch = toInsert.slice(i, i + 50);
+      const { error: insErr } = await sb.from('chemicals').insert(batch);
+      if (insErr) throw insErr;
+      imported += batch.length;
+    }
+    await loadChemicals();
+    await loadStateApprovals();
+    updateProductsAppliedStats();
+    if (status) status.textContent = 'Added ' + imported + ' product(s).';
+    toast('Imported ' + imported + ' state label product(s) ✓');
+  } catch (e) {
+    console.error(e);
+    if (status) status.textContent = '';
+    toast('Import failed: ' + (e.message || e), 'warn');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function loadChemicals() {
   const { data } = await sb.from('chemicals').select('*').order('name');
   allChemicals = data || [];
   renderChemicalsTable();
   updateProductsAppliedStats();
+  updateNewLogStateHint();
 }
 
 async function loadFields() {
@@ -2470,6 +2694,7 @@ function openEditLog(id) {
   document.getElementById('productRows').innerHTML = '';
   productRowCount = 0;
   (log.products || []).forEach(p => addProductRow(p));
+  updateNewLogStateHint();
 }
 
 // ══════════════════════════════════════════════════════
@@ -2546,6 +2771,7 @@ function initNewLogForm() {
   clearMapCanvas();
   fetchWeather();
   updateProductsAppliedStats();
+  updateNewLogStateHint();
 }
 
 function addProductRow(existing) {
@@ -2554,15 +2780,7 @@ function addProductRow(existing) {
   const row = document.createElement('div');
   row.className = 'product-row';
   row.dataset.idx = idx;
-  const chemOpts = allChemicals.map(c => {
-    const sel = existing && existing.chemical_id === c.id ? 'selected' : '';
-    const rateMin = c.rate_min != null ? c.rate_min : '';
-    const rateMax = c.rate_max != null ? c.rate_max : '';
-    const rateUnit = c.rate_unit || 'fl oz/ac';
-    const rateNotes = (c.rate_notes || '').replace(/'/g, '&apos;');
-    const ppeJson = JSON.stringify(c.ppe_requirements || []).replace(/"/g, '&quot;');
-    return '<option value="' + c.id + '" data-epa="' + (c.epa_number||'') + '" data-ppe="' + ppeJson + '" data-rei="' + (c.rei_hours||0) + '" data-signal="' + (c.signal_word||'') + '" data-rate-min="' + rateMin + '" data-rate-max="' + rateMax + '" data-rate-unit="' + rateUnit + '" data-rate-notes="' + rateNotes + '" ' + sel + '>' + c.name + '</option>';
-  }).join('');
+  const pickerList = getChemicalsForProductPicker(existing?.chemical_id);
   row.innerHTML =
     '<div>' +
     '<label>Product</label>' +
@@ -2593,12 +2811,12 @@ function addProductRow(existing) {
     '<button class="remove-product-btn" style="background:transparent;border:1px solid #C0A878;border-radius:3px;color:#C04040;font-size:18px;height:38px;width:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:20px;flex-shrink:0;">×</button>';
   document.getElementById('productRows').appendChild(row);
 
-  // Build combo options from allChemicals
-  const comboOptions = allChemicals.map(c => ({
+  // Build combo options from pickerList (state-filtered when configured)
+  const comboOptions = pickerList.map(c => ({
     value: c.id,
     label: c.name,
     sub: 'Reg.: ' + (c.epa_number || 'N/A') + (c.rei_hours ? '  |  REI: ' + c.rei_hours + 'h' : '') + (c.signal_word ? '  |  ' + c.signal_word : ''),
-    group: c.is_custom ? 'My Chemicals' : 'System Chemicals',
+    group: c.is_custom ? 'My Chemicals' : ((c.category || '').indexOf('State label') === 0 ? 'State list' : 'System Chemicals'),
     epa: c.epa_number || '',
     ppe: c.ppe_requirements || [],
     signal: c.signal_word || '',
@@ -2632,7 +2850,7 @@ function addProductRow(existing) {
   if (existing?.chemical_id && combos['comboContainer_' + idx]) {
     combos['comboContainer_' + idx].setValue(existing.chemical_id);
     // Trigger display of EPA/PPE
-    const opt = allChemicals.find(c => c.id === existing.chemical_id);
+    const opt = pickerList.find(c => c.id === existing.chemical_id) || allChemicals.find(c => c.id === existing.chemical_id);
     if (opt) {
       document.getElementById('epa_' + idx).textContent = 'Reg. #: ' + (opt.epa_number || '—');
       document.getElementById('ppe_' + idx).innerHTML = renderPPETags(opt.ppe_requirements || []);
@@ -3149,6 +3367,7 @@ function switchTab(tab) {
     if (!editingLogId) initNewLogForm();
     setTimeout(() => {
       updateProductsAppliedStats();
+      updateNewLogStateHint();
       initMapCanvas();
       if (!sigPad) initSignaturePads();
     }, 150);
@@ -3159,6 +3378,7 @@ function switchTab(tab) {
   if (tab === 'summary') { populateYearPicker(); renderSummaryTab(); }
   if (tab === 'profile') {
     renderStatePicker();
+    loadStateApprovals();
     refreshChemicalLibrarySyncBanner();
     // Reinit signature pad after layout settles on mobile
     setTimeout(() => { profileSigPad = null; initSignaturePads(); }, 300);
@@ -4010,7 +4230,11 @@ function toggleState(st) {
   const btn = document.querySelector(`[data-state="${st}"]`);
   if (btn) btn.classList.toggle('active', userProfile.registered_states.includes(st));
   // Auto-save to profile
-  sb.from('profiles').update({ registered_states: userProfile.registered_states }).eq('id', currentUser.id);
+  sb.from('profiles').update({ registered_states: userProfile.registered_states }).eq('id', currentUser.id)
+    .then(({ error }) => {
+      if (error) console.warn('registered_states save', error);
+      else loadStateApprovals();
+    });
 }
 
 // Poll chemical_sync_runs (written by scripts/epa-sync.mjs on GitHub Actions) for completion UX.
@@ -4474,6 +4698,7 @@ async function importChemicalsFromLibrary(options) {
     if (!toInsert.length) {
       status.textContent = `Your account already has these ${library.length} products (by name or registration #).`;
       await loadChemicals();
+      await loadStateApprovals();
       return { imported: 0, total: library.length };
     }
 
@@ -4486,6 +4711,7 @@ async function importChemicalsFromLibrary(options) {
     }
 
     await loadChemicals();
+    await loadStateApprovals();
     if (!silent) toast(`✓ Loaded ${imported} new products into your account`);
     if (autoSeed && imported > 0) status.textContent = `First-time setup: ${imported} products loaded.`;
     else status.textContent = `${imported} new products added. Shared list has ${library.length} total.`;
@@ -4585,14 +4811,15 @@ function showFeedbackError(msg) {
 // ══════════════════════════════════════════════════════
 const CHANGELOG = {
   version: APP_BUILD,
-  title: 'Weather location, humidity & build',
+  title: 'State-approved products & operating states',
   date: 'May 12, 2026',
   items: [
-    { type: 'new',      text: 'Weather auto-fill now shows the place name returned by the weather service so you can confirm it matches the field.' },
-    { type: 'new',      text: 'If the location is wrong, enter a US city and state or a ZIP code and tap Get weather here — values still copy into the record for editing.' },
-    { type: 'new',      text: 'Relative humidity is fetched with wind and temperature and is saved on the spray record (run the new Supabase migration if save errors mention humidity).' },
-    { type: 'improved', text: 'Build version is bumped to 2026.05.12.01; open What is new in Profile any time to read release notes again.' },
-    { type: 'new',      text: 'Roadmap: state-approved product lists, offline sync, multi-user admin, and Google Drive layout matching your paper record form — coming in follow-up releases.' }
+    { type: 'new',      text: 'Profile now includes States where you operate (multi-select). This drives which state label rows are used for the New Record product picker.' },
+    { type: 'new',      text: 'New table state_label_products in Supabase (see migration). After you load Kansas or other state exports, chemicals in New Record can be limited to those lists (matched by EPA registration when present, otherwise product name).' },
+    { type: 'new',      text: 'Profile action Import state labels into my list copies state-listed products you do not already have into My Chemicals (batch safe).' },
+    { type: 'improved', text: 'Account type replaces the old Mode label in the UI (database column remains mode for now).' },
+    { type: 'new',      text: 'Run scripts/import-kansas-md.mjs with your service role key to bulk-load the Agrian markdown export into state_label_products for KS.' },
+    { type: 'new',      text: 'Build 2026.05.12.02. Next: offline sync queue, org admin users, Google Drive paper-style export.' }
   ]
 };
 
@@ -4797,7 +5024,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
     <!-- Actions -->
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">BUILD 2026.05.12.01</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">BUILD 2026.05.12.02</span>
       <div class="flex-gap">
         <button class="btn btn-ghost" onclick="closeFeedback()">Cancel</button>
         <button class="btn btn-primary" onclick="submitFeedback()" id="feedbackSubmitBtn">Send Feedback</button>
