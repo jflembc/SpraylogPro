@@ -295,6 +295,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .w-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 10px;border-radius:3px;
   background:var(--green-bg);color:var(--green);border:1px solid var(--green);font-weight:700;}
 .w-sep{width:1px;height:40px;background:var(--border-dk);}
+.wx-loc-row{
+  flex:1 0 100%;
+  display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 12px;
+  margin-bottom:4px;padding-bottom:10px;border-bottom:1px solid rgba(0,0,0,.1);
+}
+.wx-loc-row .w-val{font-size:17px;font-weight:700;}
 
 /* ══ PRODUCT ROWS ══ */
 .product-row{
@@ -784,6 +790,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   .card > .sec-label + p,
   #customerBar,
   #weatherAutoStrip button,
+  #wxOverrideWrap,
   .sig-btns,
   .flex-between > .flex-gap,
   #fieldMapCanvas,
@@ -839,6 +846,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   .w-label { font-size:7pt !important; }
   .w-val { font-size:9pt !important; color:#000 !important; }
   .w-badge { font-size:7pt !important; }
+  .wx-loc-row { border-bottom-color:#ccc !important; padding-bottom:6pt !important; margin-bottom:4pt !important; }
+  .wx-loc-row .w-val { font-size:10pt !important; }
 
   /* ── SIGNATURE ── */
   #sigExisting img { max-height:40pt !important; }
@@ -1038,7 +1047,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.06.03</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.12.01</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1130,7 +1139,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.06.03</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.12.01</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
@@ -1307,7 +1316,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <!-- WEATHER -->
       <div class="card-dark">
         <div class="sec-label">Weather Conditions at Time of Application</div>
+        <input type="hidden" id="log_weather_location" value="">
         <div id="weatherAutoStrip" class="weather-strip hidden">
+          <div class="wx-loc-row">
+            <span class="w-label">Weather for</span>
+            <span class="w-val" id="wx_location">—</span>
+          </div>
           <span class="w-badge">● AUTO</span>
           <div class="w-sep"></div>
           <div class="w-item"><span class="w-label">Wind</span><span class="w-val" id="wx_wind">—</span></div>
@@ -1315,11 +1329,23 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <div class="w-item"><span class="w-label">Direction</span><span class="w-val" id="wx_dir">—</span></div>
           <div class="w-sep"></div>
           <div class="w-item"><span class="w-label">Temp</span><span class="w-val" id="wx_temp">—</span></div>
+          <div class="w-sep"></div>
+          <div class="w-item"><span class="w-label">Humidity</span><span class="w-val" id="wx_humidity">—</span></div>
           <div style="margin-left:auto;">
-            <button class="btn btn-ghost btn-sm" onclick="fetchWeather()">↺ Refresh</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="fetchWeather()">↺ Device location</button>
           </div>
         </div>
-        <div class="form-row c3" id="weatherManual">
+        <div id="wxOverrideWrap" style="margin-top:10px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12);">
+          <p style="font-size:13px;color:rgba(245,240,232,.75);line-height:1.5;margin-bottom:10px;">If the location above is wrong, enter a <strong>US city and state</strong> (e.g. <em>Salina, KS</em>) or a <strong>ZIP code</strong>, then fetch weather for that spot.</p>
+          <div class="form-row" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="form-group" style="flex:1;min-width:200px;margin:0;">
+              <label>City, ST or ZIP</label>
+              <input type="text" id="wx_location_query" placeholder="e.g. 67401 or Salina, KS" autocomplete="postal-code">
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="fetchWeatherByQuery()" style="margin-bottom:2px;">Get weather here</button>
+          </div>
+        </div>
+        <div class="form-row c4" id="weatherManual">
           <div class="form-group" style="margin:0"><label>Wind Speed (mph)</label><input type="number" id="log_windSpeed" placeholder="8" step="0.1"></div>
           <div class="form-group" style="margin:0"><label>Wind Direction</label>
             <select id="log_windDir">
@@ -1331,8 +1357,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
             </select>
           </div>
           <div class="form-group" style="margin:0"><label>Temperature (°F)</label><input type="number" id="log_temp" placeholder="72"></div>
+          <div class="form-group" style="margin:0"><label>Humidity (%)</label><input type="number" id="log_humidity" placeholder="45" step="0.1" min="0" max="100" title="Relative humidity; auto-filled from weather or enter manually"></div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="fetchWeather()" style="margin-top:4px;">⚡ Auto-Fill Weather</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="fetchWeather()" style="margin-top:8px;">⚡ Auto-fill from device location</button>
       </div>
 
       <!-- FIELD MAP -->
@@ -1522,6 +1549,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
       </div>
 
+      <div class="card">
+        <div class="sec-label">What is new</div>
+        <p style="font-size:14px;color:var(--muted);line-height:1.55;margin-bottom:12px;">Release notes for SprayLog Pro. After each deploy, the app may show this once automatically.</p>
+        <button type="button" class="btn btn-outline btn-sm" onclick="showReleaseModal(CHANGELOG, { persistSeen: false })">Open release notes</button>
+      </div>
+
       <div style="display:flex;justify-content:flex-end;margin-top:8px;">
         <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
       </div>
@@ -1630,7 +1663,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <table class="data-table">
             <thead><tr>
               <th>Date</th><th>Field</th><th>Commodity</th><th>Acres</th>
-              <th>Products</th><th>Wind</th><th>Temp</th><th>Time</th><th></th>
+              <th>Products</th><th>Wind</th><th>Temp</th><th>RH%</th><th>Weather for</th><th>Time</th><th></th>
             </tr></thead>
             <tbody id="summaryTableBody"></tbody>
           </table>
@@ -1709,7 +1742,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 const SUPABASE_URL = 'https://tyttsvngdeitkjttdarp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dHRzdm5nZGVpdGtqdHRkYXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM0MTMsImV4cCI6MjA5MTg2OTQxM30.whG0Kp-ybQEo4vqhlSCUmjJJT5DKOBLqcNms4ngsYF8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_BUILD = '2026.05.06.03';
+const APP_BUILD = '2026.05.12.01';
 
 const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 
@@ -2367,10 +2400,12 @@ function viewLog(id) {
         <span style="font-family:monospace;font-size:10px;color:var(--muted);margin-left:8px;">Rate: ${p.rate||'—'} ${p.unit||''}</span>
       </div>`).join('')}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;">
       <div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">WIND</div><div style="color:var(--ink);">${log.wind_speed||'—'} mph ${log.wind_direction||''}</div></div>
       <div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">TEMP</div><div style="color:var(--ink);">${log.temperature||'—'}°F</div></div>
+      <div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">HUMIDITY</div><div style="color:var(--ink);">${log.relative_humidity!=null&&log.relative_humidity!==''?log.relative_humidity+'%':'—'}</div></div>
       <div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">WATER/ACRE</div><div style="color:var(--ink);">${log.water_per_acre||'—'} gal</div></div>
+      <div style="grid-column:span 2;"><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">WEATHER LOCATION</div><div style="color:var(--ink);font-size:13px;">${String(log.weather_location_label||'—').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div></div>
     </div>
     ${log.applicator_signature ? `<div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">SIGNATURE</div><img src="${log.applicator_signature}" style="max-height:60px;border:1px solid var(--border);border-radius:3px;"></div>` : ''}
   `;
@@ -2417,6 +2452,19 @@ function openEditLog(id) {
   document.getElementById('log_windSpeed').value = log.wind_speed || '';
   document.getElementById('log_windDir').value = log.wind_direction || '';
   document.getElementById('log_temp').value = log.temperature || '';
+  document.getElementById('log_humidity').value = log.relative_humidity != null && log.relative_humidity !== '' ? log.relative_humidity : '';
+  const wl = document.getElementById('log_weather_location');
+  if (wl) wl.value = log.weather_location_label || '';
+  document.getElementById('wx_location').textContent = log.weather_location_label || '—';
+  document.getElementById('wx_wind').textContent = log.wind_speed != null && log.wind_speed !== '' ? log.wind_speed + ' mph' : '—';
+  document.getElementById('wx_dir').textContent = log.wind_direction || '—';
+  document.getElementById('wx_temp').textContent = log.temperature != null && log.temperature !== '' ? log.temperature + '°F' : '—';
+  document.getElementById('wx_humidity').textContent = log.relative_humidity != null && log.relative_humidity !== '' ? log.relative_humidity + '% RH' : '—';
+  if (log.weather_location_label || log.wind_speed != null || log.temperature != null) {
+    document.getElementById('weatherAutoStrip').classList.remove('hidden');
+  } else {
+    document.getElementById('weatherAutoStrip').classList.add('hidden');
+  }
   document.getElementById('log_fieldNotes').value = log.field_map_notes || '';
   // Products
   document.getElementById('productRows').innerHTML = '';
@@ -2486,10 +2534,15 @@ function initNewLogForm() {
   document.getElementById('log_appDate').value = now.toISOString().split('T')[0];
   document.getElementById('log_startTime').value = now.toTimeString().slice(0,5);
   // Clear other fields
-  ['log_fieldName','log_commodity','log_pest','log_water','log_stopTime','log_acres','log_supplier','log_legals','log_notification','log_windSpeed','log_temp','log_fieldNotes'].forEach(id => {
+  ['log_fieldName','log_commodity','log_pest','log_water','log_stopTime','log_acres','log_supplier','log_legals','log_notification','log_windSpeed','log_temp','log_humidity','log_fieldNotes','wx_location_query','log_weather_location'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
   document.getElementById('log_windDir').value = '';
+  const wxStrip = document.getElementById('weatherAutoStrip');
+  if (wxStrip) wxStrip.classList.add('hidden');
+  ['wx_wind','wx_dir','wx_temp','wx_humidity','wx_location'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = '—';
+  });
   clearMapCanvas();
   fetchWeather();
   updateProductsAppliedStats();
@@ -2715,26 +2768,14 @@ function buildLogPayload(status) {
     application_time: document.getElementById('log_startTime').value || null,
     stop_time: document.getElementById('log_stopTime').value || null,
     acres: parseFloat(document.getElementById('log_acres').value)||null,
-    field_name: (() => {
-      const combo = combos['fieldNameComboContainer'];
-      const val = combo?.getValue();
-      if (val && val !== '__manual' && val !== '__custom') {
-        const f = allFields.find(x => x.id === val);
-        if (f) return f.name;
-      }
-      return document.getElementById('log_fieldName').value;
-    })(),
-    field_id: (() => {
-      const combo = combos['fieldNameComboContainer'];
-      const val = combo?.getValue();
-      return (val && val !== '__manual' && val !== '__custom') ? val : null;
-    })(),
     legal_description: document.getElementById('log_legals').value,
     pesticide_supplier: document.getElementById('log_supplier').value,
     notification_name: document.getElementById('log_notification').value,
     wind_speed: parseFloat(document.getElementById('log_windSpeed').value)||null,
     wind_direction: document.getElementById('log_windDir').value,
     temperature: parseFloat(document.getElementById('log_temp').value)||null,
+    relative_humidity: parseFloat(document.getElementById('log_humidity').value)||null,
+    weather_location_label: (document.getElementById('log_weather_location')?.value || '').trim() || null,
     field_map_notes: document.getElementById('log_fieldNotes').value,
     products,
     status
@@ -2790,40 +2831,119 @@ async function completeLog() {
 }
 
 // ══════════════════════════════════════════════════════
-// WEATHER
+// WEATHER — OpenWeatherMap (device location, ZIP, or city/ST via geocoding)
 // ══════════════════════════════════════════════════════
-async function fetchWeather() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const { latitude: lat, longitude: lon } = pos.coords;
-    if (OWM_KEY === 'YOUR_OPENWEATHERMAP_KEY') {
-      document.getElementById('weatherAutoStrip').classList.add('hidden');
-      return;
+function formatWeatherLocationLabel(d, hint) {
+  if (hint && String(hint).trim()) return String(hint).trim();
+  if (!d || !d.name) return 'Unknown location';
+  const parts = [d.name];
+  if (d.sys && d.sys.country) parts.push(d.sys.country);
+  return parts.join(', ');
+}
+
+function applyWeatherData(d, locationHint) {
+  if (!d || (d.cod && Number(d.cod) !== 200)) {
+    const msg = (d && d.message) ? d.message : 'Invalid weather response';
+    throw new Error(msg);
+  }
+  const windSpeed = d.wind && d.wind.speed != null ? Number(d.wind.speed).toFixed(1) : null;
+  const windDeg = d.wind ? d.wind.deg : null;
+  const tempRaw = d.main && d.main.temp != null ? d.main.temp : null;
+  const temp = tempRaw != null ? Number(tempRaw).toFixed(1) : null;
+  const windDir = degToCompass(windDeg);
+  const hum = d.main && d.main.humidity != null ? Math.round(Number(d.main.humidity)) : null;
+  const loc = formatWeatherLocationLabel(d, locationHint);
+
+  document.getElementById('wx_wind').textContent = windSpeed != null ? windSpeed + ' mph' : '—';
+  document.getElementById('wx_dir').textContent = windDir;
+  document.getElementById('wx_temp').textContent = temp != null ? temp + '°F' : '—';
+  document.getElementById('wx_humidity').textContent = hum != null ? hum + '% RH' : '—';
+  document.getElementById('wx_location').textContent = loc;
+  const locHidden = document.getElementById('log_weather_location');
+  if (locHidden) locHidden.value = loc;
+
+  document.getElementById('log_windSpeed').value = windSpeed != null ? windSpeed : '';
+  document.getElementById('log_windDir').value = windDir !== '—' ? windDir : '';
+  document.getElementById('log_temp').value = temp != null ? String(Math.round(Number(temp))) : '';
+  document.getElementById('log_humidity').value = hum != null ? String(hum) : '';
+
+  document.getElementById('weatherAutoStrip').classList.remove('hidden');
+}
+
+async function fetchWeatherByQuery() {
+  const raw = (document.getElementById('wx_location_query')?.value || '').trim();
+  if (!raw) {
+    toast('Enter a US ZIP code or city and state (e.g. Salina, KS).', 'warn');
+    return;
+  }
+  if (OWM_KEY === 'YOUR_OPENWEATHERMAP_KEY') {
+    toast('Weather API key is not configured.', 'warn');
+    return;
+  }
+  try {
+    const zipMatch = raw.match(/^\s*(\d{5})(?:-\d{4})?\s*$/);
+    let url;
+    let hint = null;
+    if (zipMatch) {
+      url = `https://api.openweathermap.org/data/2.5/weather?zip=${encodeURIComponent(zipMatch[1])},US&appid=${OWM_KEY}&units=imperial`;
+    } else {
+      const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(raw)}&limit=5&appid=${OWM_KEY}`;
+      const gRes = await fetch(geoUrl);
+      const gJson = await gRes.json();
+      if (!Array.isArray(gJson) || !gJson.length) {
+        toast('Location not found. Try adding a state (e.g. Hays, KS) or a 5-digit ZIP.', 'warn');
+        return;
+      }
+      const g0 = gJson[0];
+      hint = [g0.name, g0.state || '', g0.country || 'US'].filter(Boolean).join(', ');
+      url = `https://api.openweathermap.org/data/2.5/weather?lat=${g0.lat}&lon=${g0.lon}&appid=${OWM_KEY}&units=imperial`;
     }
-    try {
-      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OWM_KEY}&units=imperial`);
-      const d = await res.json();
-      const windSpeed = d.wind?.speed?.toFixed(1);
-      const windDeg = d.wind?.deg;
-      const temp = d.main?.temp?.toFixed(1);
-      const windDir = degToCompass(windDeg);
+    const res = await fetch(url);
+    const d = await res.json();
+    applyWeatherData(d, hint);
+    toast('Weather updated for your chosen location ✓');
+  } catch (e) {
+    console.error('Weather by query failed', e);
+    toast('Weather lookup failed: ' + (e.message || e), 'warn');
+  }
+}
 
-      document.getElementById('wx_wind').textContent = windSpeed + ' mph';
-      document.getElementById('wx_dir').textContent = windDir;
-      document.getElementById('wx_temp').textContent = temp + '°F';
-      document.getElementById('weatherAutoStrip').classList.remove('hidden');
-
-      document.getElementById('log_windSpeed').value = windSpeed;
-      document.getElementById('log_windDir').value = windDir;
-      document.getElementById('log_temp').value = Math.round(temp);
-    } catch(e) { console.error('Weather fetch failed', e); }
-  }, () => {});
+async function fetchWeather() {
+  if (OWM_KEY === 'YOUR_OPENWEATHERMAP_KEY') {
+    document.getElementById('weatherAutoStrip').classList.add('hidden');
+    toast('Weather API key is not configured.', 'warn');
+    return;
+  }
+  if (!navigator.geolocation) {
+    toast('This browser does not support GPS location. Use city/ZIP below.', 'warn');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      try {
+        const res = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OWM_KEY}&units=imperial`
+        );
+        const d = await res.json();
+        applyWeatherData(d, null);
+        toast('Weather filled from device location ✓');
+      } catch (e) {
+        console.error('Weather fetch failed', e);
+        toast('Weather request failed. Try city/ZIP below.', 'warn');
+      }
+    },
+    () => {
+      toast('Could not read device location. Enter a city, state, or ZIP below.', 'warn');
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 120000 }
+  );
 }
 
 function degToCompass(deg) {
-  if (deg == null) return '—';
+  if (deg == null || deg === '') return '—';
   const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-  return dirs[Math.round(deg / 22.5) % 16];
+  return dirs[Math.round(Number(deg) / 22.5) % 16];
 }
 
 // ══════════════════════════════════════════════════════
@@ -3316,7 +3436,7 @@ function renderSummaryTab() {
   const tbody = document.getElementById('summaryTableBody');
   tbody.innerHTML = '';
   if (!logs.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;">No records match the selected filter.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px;">No records match the selected filter.</td></tr>';
     return;
   }
   logs.forEach(log => {
@@ -3333,6 +3453,8 @@ function renderSummaryTab() {
       '<td style="font-size:11px;max-width:180px;white-space:normal;">' + prods + '</td>' +
       '<td style="font-family:monospace;font-size:11px;">' + (log.wind_speed ? log.wind_speed + ' mph ' + (log.wind_direction || '') : '—') + '</td>' +
       '<td style="font-family:monospace;font-size:11px;">' + (log.temperature ? log.temperature + '°F' : '—') + '</td>' +
+      '<td style="font-family:monospace;font-size:11px;">' + (log.relative_humidity != null && log.relative_humidity !== '' ? log.relative_humidity + '%' : '—') + '</td>' +
+      '<td style="font-size:11px;max-width:140px;white-space:normal;word-break:break-word;">' + (log.weather_location_label || '—') + '</td>' +
       '<td style="font-family:monospace;font-size:11px;">' + timeStr + '</td>' +
       '<td><button class="btn btn-ghost btn-sm" onclick="openShareModal(\"' + log.id + '\")">Share</button></td>';
     tbody.appendChild(tr);
@@ -3340,11 +3462,11 @@ function renderSummaryTab() {
 }
 
 function buildSummaryCSV(logs) {
-  const rows = [['Date','Field Name','Commodity','Acres','Products','Reg. numbers','Pest Controlled','Wind Speed','Wind Dir','Temp','Start Time','Stop Time','Water/Acre','Legal Description','Applicator','Cert #']];
+  const rows = [['Date','Field Name','Commodity','Acres','Products','Reg. numbers','Pest Controlled','Wind Speed','Wind Dir','Temp','Humidity %','Weather location','Start Time','Stop Time','Water/Acre','Legal Description','Applicator','Cert #']];
   logs.forEach(l => {
     const prods = (l.products||[]).map(p => p.name).join('; ');
     const epas = (l.products||[]).map(p => p.epa_number).filter(Boolean).join('; ');
-    rows.push([l.application_date||'',l.field_name||'',l.commodity_applied_to||'',l.acres||'',prods,epas,l.pest_controlled||'',l.wind_speed||'',l.wind_direction||'',l.temperature||'',l.application_time||'',l.stop_time||'',l.water_per_acre||'',l.legal_description||'',l.applicator_name||'',l.applicator_cert_number||'']);
+    rows.push([l.application_date||'',l.field_name||'',l.commodity_applied_to||'',l.acres||'',prods,epas,l.pest_controlled||'',l.wind_speed||'',l.wind_direction||'',l.temperature||'',l.relative_humidity||'',l.weather_location_label||'',l.application_time||'',l.stop_time||'',l.water_per_acre||'',l.legal_description||'',l.applicator_name||'',l.applicator_cert_number||'']);
   });
   return rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n');
 }
@@ -3415,6 +3537,8 @@ function buildShareText(logId) {
     'Water/Acre: ' + (log.water_per_acre || '—') + ' gal\n' +
     'Wind: ' + (log.wind_speed || '—') + ' mph ' + (log.wind_direction || '') + '\n' +
     'Temp: ' + (log.temperature || '—') + '°F\n' +
+    'Humidity: ' + (log.relative_humidity != null && log.relative_humidity !== '' ? log.relative_humidity + '%' : '—') + '\n' +
+    'Weather for: ' + (log.weather_location_label || '—') + '\n' +
     'Time: ' + (log.application_time || '—') + '–' + (log.stop_time || '—') + '\n' +
     'Equipment: ' + (log.equipment_used || '—') + '\n' +
     'Supplier: ' + (log.pesticide_supplier || '—');
@@ -3692,6 +3816,8 @@ function buildLogCSV(log) {
     ['Wind Speed (mph)', log.wind_speed || ''],
     ['Wind Direction', log.wind_direction || ''],
     ['Temperature (°F)', log.temperature || ''],
+    ['Relative humidity (%)', log.relative_humidity || ''],
+    ['Weather location (source)', log.weather_location_label || ''],
     ['Notification Name', log.notification_name || ''],
     ['Status', log.status || '']
   ];
@@ -4459,23 +4585,25 @@ function showFeedbackError(msg) {
 // ══════════════════════════════════════════════════════
 const CHANGELOG = {
   version: APP_BUILD,
-  title: 'Product counts & chemical list',
-  date: 'May 6, 2026',
+  title: 'Weather location, humidity & build',
+  date: 'May 12, 2026',
   items: [
-    { type: 'new',      text: 'New Record now shows how many products are in the shared list and how many are in your account.' },
-    { type: 'new',      text: 'Profile has Update list now to refresh the cloud product file when you need it sooner.' },
-    { type: 'improved', text: 'Load all products does a better job skipping duplicates so big imports finish cleanly.' },
-    { type: 'improved', text: 'We stopped using agency initials in the app — it’s your chemical list and registration numbers now.' }
+    { type: 'new',      text: 'Weather auto-fill now shows the place name returned by the weather service so you can confirm it matches the field.' },
+    { type: 'new',      text: 'If the location is wrong, enter a US city and state or a ZIP code and tap Get weather here — values still copy into the record for editing.' },
+    { type: 'new',      text: 'Relative humidity is fetched with wind and temperature and is saved on the spray record (run the new Supabase migration if save errors mention humidity).' },
+    { type: 'improved', text: 'Build version is bumped to 2026.05.12.01; open What is new in Profile any time to read release notes again.' },
+    { type: 'new',      text: 'Roadmap: state-approved product lists, offline sync, multi-user admin, and Google Drive layout matching your paper record form — coming in follow-up releases.' }
   ]
 };
 
 function checkChangelog() {
   const seen = localStorage.getItem('spraylog_changelog_seen');
   if (seen === CHANGELOG.version) return;
-  showReleaseModal(CHANGELOG);
+  showReleaseModal(CHANGELOG, { persistSeen: true });
 }
 
-function showReleaseModal(release) {
+function showReleaseModal(release, opts) {
+  opts = opts || {};
   document.getElementById('releaseTitle').textContent = release.title;
   document.getElementById('releaseVersion').textContent = 'Released ' + release.date;
   document.getElementById('releaseVersionBadge').textContent = release.version;
@@ -4489,8 +4617,9 @@ function showReleaseModal(release) {
   ).join('');
 
   document.getElementById('releaseModal').classList.remove('hidden');
-  // Mark seen immediately — modal showing is enough
-  localStorage.setItem('spraylog_changelog_seen', release.version);
+  if (opts.persistSeen !== false) {
+    localStorage.setItem('spraylog_changelog_seen', release.version);
+  }
 }
 
 function closeReleaseModal() {
@@ -4668,7 +4797,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
     <!-- Actions -->
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">v2026.05.01.16</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">BUILD 2026.05.12.01</span>
       <div class="flex-gap">
         <button class="btn btn-ghost" onclick="closeFeedback()">Cancel</button>
         <button class="btn btn-primary" onclick="submitFeedback()" id="feedbackSubmitBtn">Send Feedback</button>
