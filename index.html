@@ -2115,6 +2115,34 @@ function checkCertExpiry() {
 // ══════════════════════════════════════════════════════
 let stateApprovalIndex = null;
 let _stateFilterZeroWarned = false;
+/** Supabase/PostgREST returns at most 1000 rows per request unless paginated. */
+const SUPABASE_PAGE_SIZE = 1000;
+
+async function fetchAllSupabaseRows(queryWithRange) {
+  const all = [];
+  let from = 0;
+  while (true) {
+    const to = from + SUPABASE_PAGE_SIZE - 1;
+    const { data, error } = await queryWithRange(from, to);
+    if (error) throw error;
+    const page = data || [];
+    all.push(...page);
+    if (page.length < SUPABASE_PAGE_SIZE) break;
+    from += SUPABASE_PAGE_SIZE;
+  }
+  return all;
+}
+
+async function fetchMyChemicalsCount() {
+  const { count, error } = await sb
+    .from('chemicals')
+    .select('id', { count: 'exact', head: true });
+  if (error) {
+    console.warn('chemicals count:', error.message);
+    return null;
+  }
+  return typeof count === 'number' ? count : null;
+}
 
 function normalizeRegToken(str) {
   const m = String(str || '').match(/\b\d{3,5}-\d{2,3}(?:-\d+)?\b/i);
@@ -2193,12 +2221,16 @@ async function loadStateApprovals() {
     return;
   }
 
-  const { data, error } = await sb
-    .from('state_label_products')
-    .select('state_code,product_name,reg_normalized')
-    .in('state_code', states);
-
-  if (error) {
+  let rows;
+  try {
+    rows = await fetchAllSupabaseRows((from, to) =>
+      sb
+        .from('state_label_products')
+        .select('state_code,product_name,reg_normalized')
+        .in('state_code', states)
+        .range(from, to)
+    );
+  } catch (error) {
     console.warn('state_label_products:', error.message);
     if (metaEl)
       metaEl.textContent =
@@ -2209,7 +2241,6 @@ async function loadStateApprovals() {
     return;
   }
 
-  const rows = data || [];
   stateApprovalIndex.rowCount = rows.length;
 
   if (!rows.length) {
@@ -2258,14 +2289,17 @@ async function importStateLabelsToMyChemicals() {
   if (btn) btn.disabled = true;
   if (status) status.textContent = 'Working…';
   try {
-    const { data: rows, error } = await sb.from('state_label_products').select('*').in('state_code', states);
-    if (error) throw error;
+    const rows = await fetchAllSupabaseRows((from, to) =>
+      sb.from('state_label_products').select('*').in('state_code', states).range(from, to)
+    );
     if (!rows?.length) {
       if (status) status.textContent = 'No state rows for those states.';
       toast('Nothing to import — load state_label_products first.', 'warn');
       return;
     }
-    const { data: existing } = await sb.from('chemicals').select('name, epa_number').eq('owner_id', currentUser.id);
+    const existing = await fetchAllSupabaseRows((from, to) =>
+      sb.from('chemicals').select('name, epa_number').eq('owner_id', currentUser.id).range(from, to)
+    );
     const existingNames = new Set((existing || []).map((c) => (c.name || '').toLowerCase()));
     const existingRegs = new Set((existing || []).map((c) => (c.epa_number || '').toLowerCase()).filter(Boolean));
 
@@ -2320,8 +2354,14 @@ async function importStateLabelsToMyChemicals() {
 }
 
 async function loadChemicals() {
-  const { data } = await sb.from('chemicals').select('*').order('name');
-  allChemicals = data || [];
+  try {
+    allChemicals = await fetchAllSupabaseRows((from, to) =>
+      sb.from('chemicals').select('*').order('name').range(from, to)
+    );
+  } catch (e) {
+    console.warn('loadChemicals:', e?.message || e);
+    allChemicals = [];
+  }
   renderChemicalsTable();
   updateProductsAppliedStats();
   updateNewLogStateHint();
@@ -2373,20 +2413,36 @@ async function fetchMasterProductListCount() {
 async function updateProductsAppliedStats() {
   const el = document.getElementById('productsAppliedStats');
   if (!el) return;
-  const mine = Array.isArray(allChemicals) ? allChemicals.length : 0;
   el.textContent = 'Loading product counts…';
+  const mineLoaded = Array.isArray(allChemicals) ? allChemicals.length : 0;
+  const mineTotal = await fetchMyChemicalsCount();
+  const mineDisplay = mineTotal != null ? mineTotal : mineLoaded;
   const master = await fetchMasterProductListCount();
+  const stateRows = stateApprovalIndex?.rowCount || 0;
+  const stateBit =
+    stateRows > 0
+      ? ' · <strong>State catalog</strong> (for filtering): <strong>' +
+        stateRows.toLocaleString() +
+        '</strong>'
+      : '';
   if (master === null) {
     el.innerHTML =
-      'Shared <strong>chemical list</strong>: <span style="color:var(--muted);">could not load count (check login or database access).</span> · ' +
-      '<strong>Your products</strong>: <strong>' + mine.toLocaleString() + '</strong>. ' +
-      '<span style="color:var(--muted);">Open Profile → Load all products if search feels short.</span>';
+      'Shared <strong>EPA list</strong>: <span style="color:var(--muted);">count unavailable</span> · ' +
+      '<strong>Your products</strong> (picker): <strong>' +
+      mineDisplay.toLocaleString() +
+      '</strong>' +
+      stateBit +
+      '. <span style="color:var(--muted);">3077 KS rows live in the state catalog; use Profile → Import state labels into my list to copy them into Your products.</span>';
     return;
   }
   el.innerHTML =
-    'Shared <strong>chemical list</strong>: <strong>' + master.toLocaleString() + '</strong> products · ' +
-    '<strong>Your products</strong>: <strong>' + mine.toLocaleString() + '</strong>. ' +
-    '<span style="color:var(--muted);">The picker uses your products — tap Load all products in Profile to match the full list.</span>';
+    'Shared <strong>EPA list</strong>: <strong>' +
+    master.toLocaleString() +
+    '</strong> · <strong>Your products</strong> (picker): <strong>' +
+    mineDisplay.toLocaleString() +
+    '</strong>' +
+    stateBit +
+    '. <span style="color:var(--muted);">Picker searches Your products. State catalog rows filter which ones appear when operating states are selected.</span>';
 }
 
 function openChemicalModal() { document.getElementById('chemModal').classList.remove('hidden'); }
