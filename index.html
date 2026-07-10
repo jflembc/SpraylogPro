@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SprayLog Pro — Pesticide Application Records</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#F26522">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SprayLog">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%23F26522'/%3E%3Ctext x='96' y='128' font-size='110' font-weight='bold' text-anchor='middle' fill='white' font-family='sans-serif'%3ES%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -753,6 +759,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 /* ══ MODAL ══ */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:300;padding:16px;}
+.modal-box{background:#fff;border-radius:14px;padding:24px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.3);}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;width:100%;max-width:580px;max-height:92vh;overflow-y:auto;}
 .modal h2{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1px;margin-bottom:22px;color:var(--ink);}
 .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;flex-wrap:wrap;}
@@ -1048,7 +1055,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </svg>
         <h1><span style="color:#3D3D3D;">SprayLog</span> <span style="color:#F26522;">Pro</span></h1>
       </div>
-      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.12.02</span></p>
+      <p>Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;font-weight:700;" id="authBuildLabel">BUILD 2026.05.15.01</span></p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" id="authTabBar">
@@ -1140,7 +1147,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </svg>
       <div>
         <h1><span style="color:#FFFFFF;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px;">SprayLog</span><span style="color:#F26522;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:22px;"> Pro</span></h1>
-        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.12.02</span></div>
+        <div class="sub">Track. Record. Comply. &nbsp;·&nbsp; <span style="color:#F26522;" id="appBuildLabel">BUILD 2026.05.15.01</span></div>
       </div>
     </div>
     <nav class="nav-tabs">
@@ -1435,19 +1442,28 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <button class="btn btn-primary" onclick="openChemicalModal()">+ Add Custom Chemical</button>
       </div>
       <div class="card-dark" style="margin-top:8px;">
-        <input type="text" id="chemSearch" placeholder="Search products..." style="background:var(--soil-mid);border-color:var(--border);color:var(--ink);margin-bottom:14px;" oninput="filterChemicals()">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+          <input type="text" id="chemSearch" placeholder="Search products..." style="background:var(--soil-mid);border-color:var(--border);color:var(--ink);margin:0;flex:1;min-width:200px;" oninput="filterChemicals()">
+          <button id="chemFavToggle" class="btn btn-outline btn-sm" onclick="toggleChemFavoritesOnly()" style="white-space:nowrap;">☆ Favorites Only</button>
+        </div>
         <div class="data-table-wrap"><table class="data-table" id="chemTable">
           <thead><tr>
-            <th>Product Name</th><th>Reg. #</th><th>Active Ingredient</th><th>REI</th><th>Signal</th><th>Type</th>
+            <th style="width:38px;text-align:center;" title="Favorite">★</th><th>Product Name</th><th>Reg. #</th><th>Active Ingredient</th><th>REI</th><th>Signal</th><th>Type</th>
           </tr></thead>
           <tbody id="chemTableBody"></tbody>
         </table></div>
+        <div id="chemTableNote" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;display:none;"></div>
       </div>
     </div>
 
     <!-- ══ PROFILE TAB ══ -->
     <div id="tab-profile" class="tab-content hidden">
       <div style="font-family:'IBM Plex Sans',sans-serif;font-size:28px;font-weight:700;color:var(--ink);letter-spacing:-0.5px;margin-bottom:16px;">My Profile</div>
+
+      <div class="card" id="companyCard">
+        <div class="sec-label">Company & Team</div>
+        <div id="companyInfo"></div>
+      </div>
 
       <div class="card">
         <div class="sec-label">Personal & Contact</div>
@@ -1755,7 +1771,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 const SUPABASE_URL = 'https://tyttsvngdeitkjttdarp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dHRzdm5nZGVpdGtqdHRkYXJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTM0MTMsImV4cCI6MjA5MTg2OTQxM30.whG0Kp-ybQEo4vqhlSCUmjJJT5DKOBLqcNms4ngsYF8';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const APP_BUILD = '2026.05.12.02';
+const APP_BUILD = '2026.05.15.01';
 
 const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 
@@ -1764,6 +1780,10 @@ const OWM_KEY = '97ac70b00dda2757d9504703b6330c30';
 // ══════════════════════════════════════════════════════
 let currentUser = null;
 let userProfile = null;
+let currentOrgId = null;
+let currentOrgName = null;
+let currentUserRole = null;   // 'admin' | 'applicator'
+let currentOrg = null;         // full org row
 let allChemicals = [];
 let allFields = [];
 let allCustomers = [];
@@ -1952,26 +1972,543 @@ async function doLogout() {
   document.getElementById('feedbackBtn').classList.add('hidden');
 }
 
+// ══════════════════════════════════════════════════════
+// OFFLINE ENGINE — cache data + queue records, sync on reconnect
+// ══════════════════════════════════════════════════════
+const OFFLINE_DB = 'spraylog_offline';
+const OFFLINE_VER = 1;
+let _idb = null;
+let isOnline = navigator.onLine;
+
+function openOfflineDB() {
+  if (_idb) return Promise.resolve(_idb);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(OFFLINE_DB, OFFLINE_VER);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache');
+      if (!db.objectStoreNames.contains('pending')) db.createObjectStore('pending', { keyPath: 'localId' });
+    };
+    req.onsuccess = () => { _idb = req.result; resolve(_idb); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSet(store, key, val) {
+  try {
+    const db = await openOfflineDB();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readwrite');
+      const os = tx.objectStore(store);
+      const r = (store === 'pending') ? os.put(val) : os.put(val, key);
+      r.onsuccess = () => res(true);
+      r.onerror = () => rej(r.error);
+    });
+  } catch (e) { console.warn('idbSet failed', e); return false; }
+}
+
+async function idbGet(store, key) {
+  try {
+    const db = await openOfflineDB();
+    return new Promise((res) => {
+      const tx = db.transaction(store, 'readonly');
+      const r = tx.objectStore(store).get(key);
+      r.onsuccess = () => res(r.result || null);
+      r.onerror = () => res(null);
+    });
+  } catch (e) { return null; }
+}
+
+async function idbGetAll(store) {
+  try {
+    const db = await openOfflineDB();
+    return new Promise((res) => {
+      const tx = db.transaction(store, 'readonly');
+      const r = tx.objectStore(store).getAll();
+      r.onsuccess = () => res(r.result || []);
+      r.onerror = () => res([]);
+    });
+  } catch (e) { return []; }
+}
+
+async function idbDelete(store, key) {
+  try {
+    const db = await openOfflineDB();
+    return new Promise((res) => {
+      const tx = db.transaction(store, 'readwrite');
+      const r = tx.objectStore(store).delete(key);
+      r.onsuccess = () => res(true);
+      r.onerror = () => res(false);
+    });
+  } catch (e) { return false; }
+}
+
+// Cache the user's working data after each successful online load
+async function cacheUserData() {
+  await idbSet('cache', 'chemicals', allChemicals || []);
+  await idbSet('cache', 'fields', allFields || []);
+  await idbSet('cache', 'logs', allLogs || []);
+  await idbSet('cache', 'profile', userProfile || {});
+  await idbSet('cache', 'customers', allCustomers || []);
+  await idbSet('cache', 'orgContext', {
+    orgId: currentOrgId, orgName: currentOrgName, role: currentUserRole, org: currentOrg
+  });
+  await idbSet('cache', 'cachedAt', new Date().toISOString());
+}
+
+// Restore from cache when offline
+async function restoreFromCache() {
+  allChemicals = (await idbGet('cache', 'chemicals')) || [];
+  allFields = (await idbGet('cache', 'fields')) || [];
+  allLogs = (await idbGet('cache', 'logs')) || [];
+  userProfile = (await idbGet('cache', 'profile')) || {};
+  allCustomers = (await idbGet('cache', 'customers')) || [];
+}
+
+// Count pending (unsynced) records
+async function pendingCount() {
+  const all = await idbGetAll('pending');
+  return all.length;
+}
+
+// Queue a record locally when offline
+async function queuePendingRecord(payload, status) {
+  const localId = 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  const record = { localId, payload, status, queuedAt: new Date().toISOString() };
+  await idbSet('pending', null, record);
+  // Show it in the list immediately with a pending marker
+  const displayRow = { ...payload, id: localId, _pending: true, created_at: record.queuedAt };
+  allLogs = [displayRow, ...(allLogs || [])];
+  renderLogsList();
+  await updateOfflineBanner();
+  return localId;
+}
+
+// Push all pending records to Supabase when back online
+async function syncPendingRecords(silent) {
+  if (!currentUser || !isOnline) return { synced: 0, failed: 0 };
+  const pending = await idbGetAll('pending');
+  if (!pending.length) return { synced: 0, failed: 0 };
+
+  let synced = 0, failed = 0;
+  for (const rec of pending) {
+    try {
+      const payload = { ...rec.payload, owner_id: currentUser.id, org_id: currentOrgId || rec.payload.org_id || null };
+      const { error } = await sb.from('spray_logs').insert(payload);
+      if (error) { failed++; continue; }
+      await idbDelete('pending', rec.localId);
+      synced++;
+    } catch (e) { failed++; }
+  }
+
+  if (synced > 0) {
+    await loadLogs();
+    if (!silent) toast('✓ ' + synced + ' offline record' + (synced === 1 ? '' : 's') + ' uploaded');
+  }
+  await updateOfflineBanner();
+  return { synced, failed };
+}
+
+// The status banner — shows offline state + pending count with manual sync
+async function updateOfflineBanner() {
+  let banner = document.getElementById('offlineBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'offlineBanner';
+    banner.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9998;padding:10px 16px;font-size:13px;font-weight:600;text-align:center;display:none;cursor:pointer;';
+    document.body.appendChild(banner);
+    banner.addEventListener('click', async () => {
+      if (isOnline) {
+        banner.textContent = 'Uploading...';
+        await syncPendingRecords(false);
+      }
+    });
+  }
+  const pc = await pendingCount();
+  if (!isOnline) {
+    banner.style.background = '#3D3D3D';
+    banner.style.color = '#fff';
+    banner.textContent = pc > 0
+      ? '📴 Offline — ' + pc + ' record' + (pc === 1 ? '' : 's') + ' saved on device, will upload when you have signal'
+      : '📴 Offline — you can still create records, they\'ll upload when signal returns';
+    banner.style.display = 'block';
+  } else if (pc > 0) {
+    banner.style.background = '#F26522';
+    banner.style.color = '#fff';
+    banner.textContent = '⬆ ' + pc + ' record' + (pc === 1 ? '' : 's') + ' ready to upload — tap to sync now';
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+// React to connectivity changes
+function initOfflineListeners() {
+  window.addEventListener('online', async () => {
+    isOnline = true;
+    await updateOfflineBanner();
+    const r = await syncPendingRecords(false);
+    if (r.synced > 0 && currentUser) {
+      await loadChemicals(); await loadFields(); await cacheUserData();
+    }
+  });
+  window.addEventListener('offline', async () => {
+    isOnline = false;
+    await updateOfflineBanner();
+    toast('You\'re offline — records will be saved on this device', 'warn');
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// ORGANIZATION CONTEXT
+// ══════════════════════════════════════════════════════
+async function resolveOrg() {
+  // Find the user's active membership
+  const { data: memberships, error } = await sb
+    .from('organization_members')
+    .select('org_id, role, status')
+    .eq('user_id', currentUser.id)
+    .eq('status', 'active');
+
+  if (error) { console.warn('resolveOrg error:', error.message); return null; }
+
+  // Also check for a pending email invite matching this user's email
+  if (!memberships || !memberships.length) {
+    const { data: invite } = await sb
+      .from('organization_members')
+      .select('id, org_id, role')
+      .eq('invited_email', currentUser.email)
+      .eq('status', 'invited')
+      .maybeSingle();
+    if (invite) {
+      // Auto-accept the invite
+      await sb.from('organization_members')
+        .update({ user_id: currentUser.id, status: 'active', joined_at: new Date().toISOString() })
+        .eq('id', invite.id);
+      currentOrgId = invite.org_id;
+      currentUserRole = invite.role || 'applicator';
+      await loadOrg();
+      return currentOrgId;
+    }
+    return null; // no org — first run
+  }
+
+  currentOrgId = memberships[0].org_id;
+  currentUserRole = memberships[0].role;
+  await loadOrg();
+  return currentOrgId;
+}
+
+async function loadOrg() {
+  if (!currentOrgId) return;
+  const { data } = await sb.from('organizations').select('*').eq('id', currentOrgId).maybeSingle();
+  if (data) { currentOrg = data; currentOrgName = data.name; }
+}
+
+// ── Company & Team card in Profile ──
+async function renderCompanyCard() {
+  const el = document.getElementById('companyInfo');
+  if (!el || !currentOrgId) return;
+  const isAdmin = currentUserRole === 'admin';
+
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">' +
+    '<div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">COMPANY</div>' +
+    '<div style="color:var(--ink);font-size:16px;font-weight:600;">' + (currentOrgName||'—') + '</div></div>' +
+    '<div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">YOUR ROLE</div>' +
+    '<div style="color:var(--ink);font-size:16px;font-weight:600;text-transform:capitalize;">' + (currentUserRole||'—') + '</div></div>' +
+    '</div>';
+
+  if (isAdmin) {
+    html += '<div style="background:var(--soil-mid,#f0ebe0);border-radius:8px;padding:14px;margin-bottom:16px;">' +
+      '<div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">JOIN CODE — share with employees</div>' +
+      '<div style="font-size:28px;font-weight:800;letter-spacing:4px;color:#F26522;font-family:monospace;">' + (currentOrg?.join_code||'—') + '</div>' +
+      '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Employees enter this code when they sign up to join your company.</div>' +
+      '</div>';
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">' +
+      '<button class="btn btn-primary btn-sm" onclick="openInviteModal()">+ Invite Employee</button>' +
+      '<button class="btn btn-outline btn-sm" onclick="loadMembers()">↻ Refresh</button>' +
+      '</div>';
+    html += '<div id="membersList"><div style="color:var(--muted);font-size:13px;">Loading team...</div></div>';
+  } else {
+    html += '<div style="font-size:13px;color:var(--muted);">You\'re a member of ' + (currentOrgName||'this company') + '. Contact your admin to change your access.</div>';
+  }
+
+  el.innerHTML = html;
+  if (isAdmin) loadMembers();
+}
+
+async function loadMembers() {
+  const el = document.getElementById('membersList');
+  if (!el || !currentOrgId) return;
+  const { data: members, error } = await sb
+    .from('organization_members')
+    .select('id, user_id, invited_email, role, status, joined_at')
+    .eq('org_id', currentOrgId)
+    .order('created_at');
+  if (error) { el.innerHTML = '<div style="color:#c00;">' + error.message + '</div>'; return; }
+
+  // Resolve emails for display (from profiles or invited_email)
+  const rows = (members||[]).map(m => {
+    const who = m.invited_email || (m.user_id === currentUser.id ? currentUser.email : m.user_id?.slice(0,8)+'…');
+    const statusColor = m.status === 'active' ? '#2e7d32' : (m.status === 'invited' ? '#F26522' : '#999');
+    const canManage = m.user_id !== currentUser.id; // can't manage self
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:160px;">' +
+        '<div style="color:var(--ink);font-size:14px;font-weight:600;">' + who + '</div>' +
+        '<div style="font-size:11px;color:' + statusColor + ';text-transform:uppercase;letter-spacing:1px;">' + m.status + ' · ' + m.role + '</div>' +
+      '</div>' +
+      (canManage ? '<div style="display:flex;gap:6px;">' +
+        (m.role === 'applicator'
+          ? '<button class="btn btn-ghost btn-sm" onclick="setMemberRole(\'' + m.id + '\',\'admin\')">Make Admin</button>'
+          : '<button class="btn btn-ghost btn-sm" onclick="setMemberRole(\'' + m.id + '\',\'applicator\')">Make Applicator</button>') +
+        (m.status === 'active'
+          ? '<button class="btn btn-ghost btn-sm" style="color:#c0392b;" onclick="setMemberStatus(\'' + m.id + '\',\'deactivated\')">Deactivate</button>'
+          : '<button class="btn btn-ghost btn-sm" style="color:#2e7d32;" onclick="setMemberStatus(\'' + m.id + '\',\'active\')">Reactivate</button>') +
+      '</div>' : '<span style="font-size:11px;color:var(--muted);">You</span>') +
+      '</div>';
+  }).join('');
+
+  const activeCount = (members||[]).filter(m => m.status === 'active').length;
+  const seatNote = currentOrg?.seat_limit
+    ? '<div style="font-size:11px;color:var(--muted);margin-top:10px;">' + activeCount + ' of ' + currentOrg.seat_limit + ' seats used</div>'
+    : '<div style="font-size:11px;color:var(--muted);margin-top:10px;">' + activeCount + ' active member' + (activeCount===1?'':'s') + '</div>';
+
+  el.innerHTML = (rows || '<div style="color:var(--muted);">No members yet.</div>') + seatNote;
+}
+
+async function setMemberRole(memberId, role) {
+  const { error } = await sb.from('organization_members').update({ role }).eq('id', memberId);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Role updated ✓'); loadMembers();
+}
+
+async function setMemberStatus(memberId, status) {
+  if (status === 'deactivated' && !confirm('Deactivate this employee? Their past records stay on file, but they lose access.')) return;
+  const { error } = await sb.from('organization_members').update({ status }).eq('id', memberId);
+  if (error) { toast(error.message, 'error'); return; }
+  toast(status === 'active' ? 'Member reactivated ✓' : 'Member deactivated', status==='active'?undefined:'warn');
+  loadMembers();
+}
+
+// ── Invite modal — three methods ──
+function openInviteModal() {
+  let m = document.getElementById('inviteModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'inviteModal';
+    m.className = 'modal-overlay hidden';
+    m.innerHTML = `
+      <div class="modal-box" style="max-width:460px;">
+        <h3 style="margin-bottom:4px;color:#3D3D3D;">Invite an Employee</h3>
+        <p style="font-size:13px;color:#777;margin-bottom:16px;">Three ways to add someone to ${currentOrgName||'your company'}:</p>
+
+        <div style="background:var(--soil-mid,#f0ebe0);border-radius:8px;padding:14px;margin-bottom:16px;">
+          <div style="font-weight:700;font-size:13px;margin-bottom:4px;">1. Share your join code</div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:4px;color:#F26522;font-family:monospace;">${currentOrg?.join_code||'—'}</div>
+          <div style="font-size:12px;color:#777;margin-top:2px;">They enter this when signing up. Easiest method.</div>
+        </div>
+
+        <div style="border-top:1px solid #eee;padding-top:14px;margin-bottom:8px;">
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;">2. Send an email invite</div>
+          <input type="email" id="inviteEmail" placeholder="employee@email.com" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px;">
+          <select id="inviteRole" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px;">
+            <option value="applicator">Applicator (employee)</option>
+            <option value="admin">Admin (manager)</option>
+          </select>
+          <button class="btn btn-primary btn-sm" style="width:100%;" onclick="sendEmailInvite()">Create Email Invite</button>
+          <div style="font-size:11px;color:#999;margin-top:6px;">Creates a pending invite. When they sign up with that email, they auto-join.</div>
+        </div>
+
+        <div style="margin-top:14px;text-align:right;">
+          <button class="btn btn-ghost" onclick="closeInviteModal()">Close</button>
+        </div>
+        <div id="inviteMsg" style="font-size:13px;margin-top:8px;text-align:center;"></div>
+      </div>`;
+    document.body.appendChild(m);
+  } else {
+    // refresh join code in case
+  }
+  m.classList.remove('hidden');
+}
+function closeInviteModal() { const m=document.getElementById('inviteModal'); if(m) m.classList.add('hidden'); }
+
+async function sendEmailInvite() {
+  const email = document.getElementById('inviteEmail').value.trim().toLowerCase();
+  const role = document.getElementById('inviteRole').value;
+  const msg = document.getElementById('inviteMsg');
+  if (!email || !email.includes('@')) { msg.style.color='#c00'; msg.textContent='Enter a valid email.'; return; }
+  msg.style.color='#777'; msg.textContent='Creating invite...';
+
+  const { error } = await sb.from('organization_members').insert({
+    org_id: currentOrgId, invited_email: email, role, status: 'invited', invited_by: currentUser.id
+  });
+  if (error) {
+    msg.style.color='#c00';
+    msg.textContent = error.message.includes('duplicate') ? 'That person is already invited or a member.' : error.message;
+    return;
+  }
+  msg.style.color='#2e7d32';
+  msg.textContent = '✓ Invite created for ' + email + '. When they sign up with this email, they\'ll join automatically.';
+  document.getElementById('inviteEmail').value = '';
+  loadMembers();
+}
+
+// First-run: user has no org. Show create-or-join screen.
+function showOrgSetup() {
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('authScreen').classList.add('hidden');
+  let el = document.getElementById('orgSetupScreen');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'orgSetupScreen';
+    el.innerHTML = `
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--soil,#F5F0E8);">
+        <div style="max-width:440px;width:100%;background:#fff;border-radius:14px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.1);">
+          <div style="font-size:26px;font-weight:800;color:#F26522;margin-bottom:4px;">SprayLog<span style="color:#3D3D3D;"> Pro</span></div>
+          <p style="color:#777;font-size:14px;margin-bottom:24px;">Let's set up your company account.</p>
+
+          <div id="orgSetupChoice">
+            <button class="btn btn-primary" style="width:100%;margin-bottom:12px;padding:16px;" onclick="orgSetupMode('create')">
+              🏢 Create a Company<br><span style="font-weight:400;font-size:12px;opacity:.85;">I'm the owner / manager</span>
+            </button>
+            <button class="btn btn-outline" style="width:100%;padding:16px;" onclick="orgSetupMode('join')">
+              👥 Join a Company<br><span style="font-weight:400;font-size:12px;opacity:.7;">I have a join code from my employer</span>
+            </button>
+          </div>
+
+          <div id="orgSetupCreate" style="display:none;">
+            <label style="font-size:12px;font-weight:600;text-transform:uppercase;color:#999;">Company Name</label>
+            <input type="text" id="orgCreateName" placeholder="e.g. Flemming Farms" style="width:100%;margin:6px 0 16px;padding:12px;font-size:16px;border:2px solid #ddd;border-radius:8px;">
+            <button class="btn btn-primary" style="width:100%;padding:14px;" onclick="createOrg()">Create Company</button>
+            <button class="btn btn-ghost" style="width:100%;margin-top:8px;" onclick="orgSetupMode('choice')">← Back</button>
+          </div>
+
+          <div id="orgSetupJoin" style="display:none;">
+            <label style="font-size:12px;font-weight:600;text-transform:uppercase;color:#999;">Join Code</label>
+            <input type="text" id="orgJoinCode" placeholder="e.g. B05441" maxlength="6" style="width:100%;margin:6px 0 16px;padding:12px;font-size:20px;letter-spacing:3px;text-transform:uppercase;text-align:center;border:2px solid #ddd;border-radius:8px;">
+            <button class="btn btn-primary" style="width:100%;padding:14px;" onclick="joinOrgByCode()">Join Company</button>
+            <button class="btn btn-ghost" style="width:100%;margin-top:8px;" onclick="orgSetupMode('choice')">← Back</button>
+          </div>
+
+          <div id="orgSetupMsg" style="margin-top:14px;font-size:13px;text-align:center;"></div>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+  }
+  el.style.display = 'block';
+  orgSetupMode('choice');
+}
+
+function orgSetupMode(mode) {
+  const c = document.getElementById('orgSetupChoice');
+  const cr = document.getElementById('orgSetupCreate');
+  const j = document.getElementById('orgSetupJoin');
+  if (c) c.style.display = mode === 'choice' ? 'block' : 'none';
+  if (cr) cr.style.display = mode === 'create' ? 'block' : 'none';
+  if (j) j.style.display = mode === 'join' ? 'block' : 'none';
+  const msg = document.getElementById('orgSetupMsg'); if (msg) msg.textContent = '';
+}
+
+async function createOrg() {
+  const name = document.getElementById('orgCreateName').value.trim();
+  const msg = document.getElementById('orgSetupMsg');
+  if (!name) { msg.style.color = '#c00'; msg.textContent = 'Enter a company name.'; return; }
+  msg.style.color = '#777'; msg.textContent = 'Creating...';
+
+  const { data: org, error } = await sb.from('organizations')
+    .insert({ name, owner_id: currentUser.id, billing_plan: 'flat' })
+    .select().single();
+  if (error) { msg.style.color = '#c00'; msg.textContent = error.message; return; }
+
+  const { error: mErr } = await sb.from('organization_members')
+    .insert({ org_id: org.id, user_id: currentUser.id, role: 'admin', status: 'active', joined_at: new Date().toISOString() });
+  if (mErr) { msg.style.color = '#c00'; msg.textContent = mErr.message; return; }
+
+  currentOrgId = org.id; currentOrg = org; currentOrgName = org.name; currentUserRole = 'admin';
+  document.getElementById('orgSetupScreen').style.display = 'none';
+  await bootApp(currentUser);
+}
+
+async function joinOrgByCode() {
+  const code = document.getElementById('orgJoinCode').value.trim().toUpperCase();
+  const msg = document.getElementById('orgSetupMsg');
+  if (!code) { msg.style.color = '#c00'; msg.textContent = 'Enter your join code.'; return; }
+  msg.style.color = '#777'; msg.textContent = 'Joining...';
+
+  const { data: org, error } = await sb.from('organizations')
+    .select('id, name').eq('join_code', code).maybeSingle();
+  if (error || !org) { msg.style.color = '#c00'; msg.textContent = 'Invalid join code. Check with your employer.'; return; }
+
+  const { error: mErr } = await sb.from('organization_members')
+    .insert({ org_id: org.id, user_id: currentUser.id, role: 'applicator', status: 'active', joined_at: new Date().toISOString() });
+  if (mErr) {
+    if (mErr.message.includes('duplicate')) { msg.style.color = '#c00'; msg.textContent = 'You are already a member of this company.'; }
+    else { msg.style.color = '#c00'; msg.textContent = mErr.message; }
+    return;
+  }
+
+  currentOrgId = org.id; currentOrgName = org.name; currentUserRole = 'applicator';
+  await loadOrg();
+  document.getElementById('orgSetupScreen').style.display = 'none';
+  await bootApp(currentUser);
+}
+
 async function bootApp(user) {
   try {
     currentUser = user;
     document.getElementById('authScreen').classList.add('hidden');
+
+    // Resolve organization membership before anything else
+    if (navigator.onLine) {
+      await resolveOrg();
+      if (!currentOrgId) {
+        // No org yet — first run. Show create/join.
+        showOrgSetup();
+        return;
+      }
+    } else {
+      // Offline — use cached org context
+      const cachedOrg = await idbGet('cache', 'orgContext');
+      if (cachedOrg) {
+        currentOrgId = cachedOrg.orgId; currentOrgName = cachedOrg.orgName;
+        currentUserRole = cachedOrg.role; currentOrg = cachedOrg.org;
+      }
+    }
+
     document.getElementById('app').classList.remove('hidden');
-    await loadProfile();
-    await loadStateApprovals();
-    await loadChemicals();
-    await ensureChemicalsSeeded();
-    refreshChemicalLibrarySyncBanner();
-    await loadFields();
-    await loadCustomers();
-    await loadLogs();
-    // Defer sig pad init — canvas must be visible first
+    initOfflineListeners();
+
+    if (navigator.onLine) {
+      // Online — load fresh, then cache for offline use
+      await loadProfile();
+      await loadStateApprovals();
+      await loadChemicals();
+      await ensureChemicalsSeeded();
+      refreshChemicalLibrarySyncBanner();
+      await loadFields();
+      await loadCustomers();
+      await loadLogs();
+      await cacheUserData();
+      // Push anything queued from a previous offline session
+      await syncPendingRecords(true);
+    } else {
+      // Offline — restore last cached data so the app is fully usable
+      isOnline = false;
+      await restoreFromCache();
+      renderChemicalsTable();
+      renderLogsList();
+      toast('Offline mode — using your saved data', 'warn');
+    }
+
+    await updateOfflineBanner();
     checkCertExpiry();
     switchTab('logs');
     setTimeout(checkChangelog, 800);
     document.getElementById('feedbackBtn').classList.remove('hidden');
   } catch(e) {
     console.error('Boot error:', e);
+    // Last-ditch: try cache so the user isn't stranded
+    try { await restoreFromCache(); renderLogsList(); } catch(_) {}
     switchTab('logs');
   }
 }
@@ -2316,6 +2853,7 @@ async function importStateLabelsToMyChemicals() {
       if (rl) existingRegs.add(rl);
       toInsert.push({
         owner_id: currentUser.id,
+        org_id: currentOrgId || null,
         name: nm,
         epa_number: reg,
         active_ingredient: String(r.active_ingredient || '').trim(),
@@ -2355,9 +2893,12 @@ async function importStateLabelsToMyChemicals() {
 
 async function loadChemicals() {
   try {
-    allChemicals = await fetchAllSupabaseRows((from, to) =>
-      sb.from('chemicals').select('*').order('name').range(from, to)
-    );
+    allChemicals = await fetchAllSupabaseRows((from, to) => {
+      let q = sb.from('chemicals').select('*');
+      if (currentOrgId) q = q.or('org_id.eq.' + currentOrgId + ',owner_id.eq.' + currentUser.id);
+      else q = q.eq('owner_id', currentUser.id);
+      return q.order('name').range(from, to);
+    });
   } catch (e) {
     console.warn('loadChemicals:', e?.message || e);
     allChemicals = [];
@@ -2369,12 +2910,22 @@ async function loadChemicals() {
 
 async function loadFields() {
   if (!currentUser) return;
-  const { data } = await sb
-    .from('fields')
-    .select('id, name, acres, crop, season, farm_id')
-    .eq('user_id', currentUser.id)
-    .order('name');
+  let q = sb.from('fields').select('id, name, acres, crop, season, farm_id');
+  if (currentOrgId) q = q.eq('org_id', currentOrgId);
+  else q = q.eq('user_id', currentUser.id);
+  const { data } = await q.order('name');
   allFields = data || [];
+}
+
+let chemFavoritesOnly = false;
+function toggleChemFavoritesOnly() {
+  chemFavoritesOnly = !chemFavoritesOnly;
+  const btn = document.getElementById('chemFavToggle');
+  if (btn) {
+    btn.classList.toggle('active', chemFavoritesOnly);
+    btn.textContent = chemFavoritesOnly ? '⭐ Showing Favorites' : '☆ Favorites Only';
+  }
+  renderChemicalsTable();
 }
 
 function renderChemicalsTable() {
@@ -2382,19 +2933,55 @@ function renderChemicalsTable() {
   const tbody = document.getElementById('chemTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
-  const filtered = allChemicals.filter(c => !q || c.name.toLowerCase().includes(q) || (c.active_ingredient||'').toLowerCase().includes(q));
-  filtered.forEach(c => {
+
+  let filtered = allChemicals.filter(c =>
+    !q || c.name.toLowerCase().includes(q) || (c.active_ingredient||'').toLowerCase().includes(q)
+  );
+  if (chemFavoritesOnly) filtered = filtered.filter(c => c.is_favorite);
+
+  // Favorites first, then most-used, then alphabetical
+  filtered.sort((a, b) => {
+    if (!!b.is_favorite !== !!a.is_favorite) return (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0);
+    const ua = a.use_count || 0, ub = b.use_count || 0;
+    if (ub !== ua) return ub - ua;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  // Cap initial render for performance on big lists; search narrows it
+  const CAP = 300;
+  const shown = filtered.slice(0, CAP);
+
+  shown.forEach(c => {
     const tr = document.createElement('tr');
+    const star = c.is_favorite ? '⭐' : '☆';
     tr.innerHTML = `
-      <td style="font-weight:600;color:var(--ink);font-weight:600;">${c.name}</td>
+      <td style="text-align:center;cursor:pointer;font-size:16px;width:38px;" title="Toggle favorite" data-fav="${c.id}">${star}</td>
+      <td style="font-weight:600;color:var(--ink);">${c.name}${(c.use_count||0)>0 ? ' <span style="font-family:monospace;font-size:9px;color:var(--muted);">('+c.use_count+'×)</span>' : ''}</td>
       <td style="font-family:monospace;font-size:11px;">${c.epa_number||'—'}</td>
       <td style="font-size:12px;">${c.active_ingredient||'—'}</td>
       <td style="font-family:monospace;font-size:11px;">${c.rei_hours != null ? c.rei_hours+'h' : '—'}</td>
       <td><span class="signal-${c.signal_word}" style="font-family:monospace;font-size:10px;font-weight:700;">${c.signal_word||'—'}</span></td>
-      <td style="font-size:11px;color:var(--muted);">${c.is_custom ? 'Custom' : 'System'}</td>
+      <td style="font-size:11px;color:var(--muted);">${c.is_default ? 'System' : 'Custom'}</td>
     `;
     tbody.appendChild(tr);
   });
+
+  // Wire star clicks
+  tbody.querySelectorAll('[data-fav]').forEach(el => {
+    el.addEventListener('click', () => toggleChemicalFavorite(el.dataset.fav));
+  });
+
+  // Footer note if capped
+  const note = document.getElementById('chemTableNote');
+  if (note) {
+    if (filtered.length > CAP) {
+      note.textContent = 'Showing first ' + CAP + ' of ' + filtered.length.toLocaleString() + ' — type in search to narrow.';
+      note.style.display = 'block';
+    } else {
+      note.textContent = filtered.length.toLocaleString() + ' chemical' + (filtered.length === 1 ? '' : 's');
+      note.style.display = 'block';
+    }
+  }
 }
 
 function filterChemicals() { renderChemicalsTable(); }
@@ -2458,8 +3045,9 @@ async function saveCustomChem() {
     rei_hours: parseInt(document.getElementById('chm_rei').value)||0,
     signal_word: document.getElementById('chm_signal').value,
     ppe_requirements: ppe,
-    is_custom: true,
-    owner_id: currentUser.id
+    is_default: false,
+    owner_id: currentUser.id,
+    org_id: currentOrgId || null
   });
   if (error) { alert('Error: ' + error.message); return; }
   closeChemModal();
@@ -2566,7 +3154,10 @@ function onCustomerChange(id) {
 // LOGS
 // ══════════════════════════════════════════════════════
 async function loadLogs() {
-  const { data } = await sb.from('spray_logs').select('*').eq('owner_id', currentUser.id).order('created_at', { ascending: false });
+  let q = sb.from('spray_logs').select('*');
+  if (currentOrgId) q = q.eq('org_id', currentOrgId);
+  else q = q.eq('owner_id', currentUser.id);
+  const { data } = await q.order('created_at', { ascending: false });
   allLogs = data || [];
   renderLogsList();
 }
@@ -2638,6 +3229,8 @@ function renderLogsList() {
         '<span class="lc-name" style="flex:1;">' + (log.field_name ? log.field_name + (log.commodity_applied_to ? ' — ' + log.commodity_applied_to : '') : (log.commodity_applied_to || 'Application Record')) + '</span>' +
         '<div style="display:flex;gap:6px;align-items:center;">' +
           '<span class="status-badge status-' + (log.status||'draft') + '">' + (log.status||'draft') + '</span>' +
+          (log._pending ? '<span class="status-badge" style="background:#F26522;color:#fff;margin-left:6px;">⬆ not uploaded</span>' : '') +
+          (log.is_voided ? '<span class="status-badge" style="background:#c0392b;color:#fff;margin-left:6px;">⛔ voided</span>' : '') +
           '<span class="lc-date">' + (log.application_date || formatDate(log.created_at)) + '</span>' +
         '</div>' +
       '</div>' +
@@ -2661,7 +3254,10 @@ function viewLog(id) {
   if (!log) return;
   const content = document.getElementById('viewLogContent');
   const prods = (log.products || []);
-  content.innerHTML = `
+  const voidBanner = log.is_voided
+    ? '<div style="background:#fbeaea;border:1px solid #c0392b;border-radius:8px;padding:10px 14px;margin-bottom:14px;"><strong style="color:#c0392b;">⛔ VOIDED</strong><div style="font-size:13px;color:#666;margin-top:4px;">' + String(log.voided_reason||'').replace(/</g,'&lt;') + '</div></div>'
+    : '';
+  content.innerHTML = voidBanner + `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
       <div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">APPLICATOR</div><div style="color:var(--ink);font-size:14px;font-weight:600;">${log.applicator_name||'—'}</div></div>
       <div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">CERT #</div><div style="color:var(--ink);font-size:14px;">${log.applicator_cert_number||'—'}</div></div>
@@ -2690,11 +3286,99 @@ function viewLog(id) {
     ${log.applicator_signature ? `<div><div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">SIGNATURE</div><img src="${log.applicator_signature}" style="max-height:60px;border:1px solid var(--border);border-radius:3px;"></div>` : ''}
   `;
   document.getElementById('viewLogModal').classList.remove('hidden');
+  // Adjust action button for signed vs draft
+  const editBtn = document.querySelector('#viewLogModal .btn-outline');
+  if (editBtn) {
+    const locked = (log.status === 'complete' || log.status === 'signed') && !log._pending;
+    if (log.is_voided) { editBtn.style.display = 'none'; }
+    else { editBtn.style.display = ''; editBtn.textContent = locked ? 'Void & Re-enter' : 'Edit'; }
+  }
 }
 
 function closeViewLog() { document.getElementById('viewLogModal').classList.add('hidden'); }
-function editLog() { closeViewLog(); openEditLog(currentViewLogId); }
+function editLog() {
+  const log = allLogs.find(l => l.id === currentViewLogId);
+  if (log && (log.status === 'complete' || log.status === 'signed') && !log._pending) {
+    // Signed records are locked. Offer void instead of edit.
+    if (log.is_voided) { toast('This record is already voided.', 'warn'); return; }
+    openVoidModal(currentViewLogId);
+    return;
+  }
+  closeViewLog();
+  openEditLog(currentViewLogId);
+}
 function printViewLog() { closeViewLog(); openEditLog(currentViewLogId); setTimeout(() => printLog(), 500); }
+
+// ── VOID SYSTEM — signed records can't be edited, only voided ──
+function openVoidModal(id) {
+  const log = allLogs.find(l => l.id === id);
+  if (!log) return;
+  let modal = document.getElementById('voidModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'voidModal';
+    modal.className = 'modal-overlay hidden';
+    modal.innerHTML = `
+      <div class="modal-box" style="max-width:440px;">
+        <h3 style="margin-bottom:8px;color:#3D3D3D;">Void This Record</h3>
+        <p style="font-size:13px;color:#777;line-height:1.6;margin-bottom:16px;">
+          Signed records can't be edited — that's a compliance requirement. Instead, <strong>void</strong> this record (it stays on file with your reason for the audit trail), then create a new corrected record.
+        </p>
+        <label style="font-size:12px;font-weight:600;text-transform:uppercase;color:#999;">Reason for voiding</label>
+        <textarea id="voidReason" rows="3" placeholder="e.g. Wrong rate entered, wrong field selected..." style="width:100%;margin:6px 0 16px;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:14px;"></textarea>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1;" onclick="closeVoidModal()">Cancel</button>
+          <button class="btn" style="flex:1;background:#c0392b;color:#fff;" onclick="confirmVoid()">Void Record</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:#555;cursor:pointer;">
+          <input type="checkbox" id="voidReenter" checked> Start a new record pre-filled from this one
+        </label>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  modal.dataset.voidId = id;
+  document.getElementById('voidReason').value = '';
+  modal.classList.remove('hidden');
+  closeViewLog();
+}
+function closeVoidModal() {
+  const m = document.getElementById('voidModal'); if (m) m.classList.add('hidden');
+}
+async function confirmVoid() {
+  const modal = document.getElementById('voidModal');
+  const id = modal.dataset.voidId;
+  const reason = document.getElementById('voidReason').value.trim();
+  if (!reason) { toast('Please enter a reason for voiding.', 'error'); return; }
+  const reenter = document.getElementById('voidReenter').checked;
+  const log = allLogs.find(l => l.id === id);
+
+  const { error } = await sb.from('spray_logs').update({
+    is_voided: true,
+    voided_reason: reason,
+    voided_by: currentUser.id,
+    voided_at: new Date().toISOString()
+  }).eq('id', id);
+
+  if (error) { toast('Void failed: ' + error.message, 'error'); return; }
+  closeVoidModal();
+  await loadLogs();
+  await cacheUserData();
+  toast('Record voided ✓');
+
+  if (reenter && log) {
+    // Pre-fill a new record from the voided one
+    setTimeout(() => {
+      switchTab('newlog');
+      initNewLogForm();
+      document.getElementById('log_fieldName').value = log.field_name || '';
+      document.getElementById('log_commodity').value = log.commodity_applied_to || '';
+      document.getElementById('log_pest').value = log.pest_controlled || '';
+      document.getElementById('log_acres').value = log.acres || '';
+      document.getElementById('log_legals').value = log.legal_description || '';
+      toast('New record pre-filled — make your correction and complete it.');
+    }, 400);
+  }
+}
 
 function openEditLog(id) {
   const log = allLogs.find(l => l.id === id);
@@ -2867,17 +3551,32 @@ function addProductRow(existing) {
     '<button class="remove-product-btn" style="background:transparent;border:1px solid #C0A878;border-radius:3px;color:#C04040;font-size:18px;height:38px;width:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-top:20px;flex-shrink:0;">×</button>';
   document.getElementById('productRows').appendChild(row);
 
-  // Build combo options from pickerList (state-filtered when configured)
-  const comboOptions = pickerList.map(c => ({
-    value: c.id,
-    label: c.name,
-    sub: 'Reg.: ' + (c.epa_number || 'N/A') + (c.rei_hours ? '  |  REI: ' + c.rei_hours + 'h' : '') + (c.signal_word ? '  |  ' + c.signal_word : ''),
-    group: c.is_custom ? 'My Chemicals' : ((c.category || '').indexOf('State label') === 0 ? 'State list' : 'System Chemicals'),
-    epa: c.epa_number || '',
-    ppe: c.ppe_requirements || [],
-    signal: c.signal_word || '',
-    rei: c.rei_hours || 0
-  }));
+  // Sort: favorites first, then most-used, then alphabetical
+  const sortedPicker = [...pickerList].sort((a, b) => {
+    if (!!b.is_favorite !== !!a.is_favorite) return (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0);
+    const ua = a.use_count || 0, ub = b.use_count || 0;
+    if (ub !== ua) return ub - ua;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  // Build combo options — favorites and frequently-used grouped at top
+  const comboOptions = sortedPicker.map(c => {
+    let group;
+    if (c.is_favorite) group = '⭐ Favorites';
+    else if ((c.use_count || 0) > 0) group = 'Recently Used';
+    else if (c.is_default === false) group = 'My Chemicals';
+    else group = 'All Chemicals';
+    return {
+      value: c.id,
+      label: (c.is_favorite ? '⭐ ' : '') + c.name,
+      sub: 'Reg.: ' + (c.epa_number || 'N/A') + (c.rei_hours ? '  |  REI: ' + c.rei_hours + 'h' : '') + (c.signal_word ? '  |  ' + c.signal_word : '') + ((c.use_count || 0) > 0 ? '  |  used ' + c.use_count + '×' : ''),
+      group: group,
+      epa: c.epa_number || '',
+      ppe: c.ppe_requirements || [],
+      signal: c.signal_word || '',
+      rei: c.rei_hours || 0
+    };
+  });
   comboOptions.push({ value: '__custom', label: '+ Enter custom product name', group: 'Custom' });
 
   createCombo('comboContainer_' + idx, comboOptions, {
@@ -3052,8 +3751,45 @@ function buildLogPayload(status) {
     weather_location_label: (document.getElementById('log_weather_location')?.value || '').trim() || null,
     field_map_notes: document.getElementById('log_fieldNotes').value,
     products,
-    status
+    status,
+    org_id: currentOrgId || null,
+    applicator_user_id: currentUser ? currentUser.id : null
   };
+}
+
+// ── Track chemical usage so favorites & "recently used" stay accurate ──
+async function bumpChemicalUsage(products) {
+  if (!currentUser || !Array.isArray(products)) return;
+  const ids = [...new Set(products.map(p => p && p.chemical_id).filter(Boolean))];
+  if (!ids.length) return;
+  const nowIso = new Date().toISOString();
+  // Bump each used chemical's counter locally, then persist
+  for (const id of ids) {
+    const chem = (allChemicals || []).find(c => c.id === id);
+    const nextCount = ((chem && chem.use_count) || 0) + 1;
+    if (chem) { chem.use_count = nextCount; chem.last_used_at = nowIso; }
+    sb.from('chemicals')
+      .update({ use_count: nextCount, last_used_at: nowIso })
+      .eq('id', id)
+      .eq('owner_id', currentUser.id)
+      .then(() => {}, () => {});
+  }
+}
+
+// ── Toggle a chemical as a favorite (star) ──
+async function toggleChemicalFavorite(id) {
+  if (!currentUser || !id) return;
+  const chem = (allChemicals || []).find(c => c.id === id);
+  if (!chem) return;
+  const next = !chem.is_favorite;
+  chem.is_favorite = next;
+  const { error } = await sb.from('chemicals')
+    .update({ is_favorite: next })
+    .eq('id', id)
+    .eq('owner_id', currentUser.id);
+  if (error) { chem.is_favorite = !next; toast('Could not update favorite: ' + error.message, 'error'); return; }
+  toast(next ? '⭐ Added to favorites' : 'Removed from favorites');
+  renderChemicalsTable();
 }
 
 // ── TOAST (all buttons confirm success or show error) ──
@@ -3073,6 +3809,13 @@ function toast(msg, type) {
 
 async function saveDraft() {
   const payload = buildLogPayload('draft');
+  if (!navigator.onLine) {
+    await queuePendingRecord(payload, 'draft');
+    initNewLogForm();
+    toast('📴 Draft saved on device — will upload when you have signal');
+    setTimeout(() => switchTab('logs'), 1000);
+    return;
+  }
   let error;
   if (editingLogId) {
     ({ error } = await sb.from('spray_logs').update(payload).eq('id', editingLogId));
@@ -3083,6 +3826,7 @@ async function saveDraft() {
   }
   if (error) { toast('Save failed: ' + error.message, 'error'); return; }
   await loadLogs();
+  await cacheUserData();
   toast('Draft saved ✓');
 }
 
@@ -3090,6 +3834,16 @@ async function completeLog() {
   if (!document.getElementById('log_appDate').value) { toast('Application date is required', 'error'); return; }
   if (!document.getElementById('log_acres').value) { toast('Acres is required', 'error'); return; }
   const payload = buildLogPayload('complete');
+
+  if (!navigator.onLine) {
+    await queuePendingRecord(payload, 'complete');
+    bumpChemicalUsage(payload.products);
+    initNewLogForm();
+    toast('📴 Record saved on device — will upload when you have signal');
+    setTimeout(() => switchTab('logs'), 1200);
+    return;
+  }
+
   let error;
   if (editingLogId) {
     ({ error } = await sb.from('spray_logs').update(payload).eq('id', editingLogId));
@@ -3099,7 +3853,9 @@ async function completeLog() {
     if (data) editingLogId = data.id;
   }
   if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  bumpChemicalUsage(payload.products);
   await loadLogs();
+  await cacheUserData();
   toast('Record completed and saved ✓');
   setTimeout(() => switchTab('logs'), 1200);
 }
@@ -3433,6 +4189,7 @@ function switchTab(tab) {
   if (tab === 'logs') { logsSearchQuery = ''; loadLogs(); }
   if (tab === 'summary') { populateYearPicker(); renderSummaryTab(); }
   if (tab === 'profile') {
+    renderCompanyCard();
     renderStatePicker();
     loadStateApprovals();
     refreshChemicalLibrarySyncBanner();
@@ -3501,7 +4258,7 @@ function populateYearPicker() {
 }
 
 function getFilteredLogs() {
-  const completed = allLogs.filter(l => l.status === 'complete' || l.status === 'signed');
+  const completed = allLogs.filter(l => (l.status === 'complete' || l.status === 'signed') && !l.is_voided);
   const now = new Date();
   const year = now.getFullYear();
 
@@ -3572,7 +4329,7 @@ function getFilteredLogs() {
 
 function renderSummaryTab() {
   const logs = getFilteredLogs();
-  const allCompleted = allLogs.filter(l => l.status === 'complete' || l.status === 'signed');
+  const allCompleted = allLogs.filter(l => (l.status === 'complete' || l.status === 'signed') && !l.is_voided);
 
   // ── CORE METRICS ──
   const totalAcres = logs.reduce((s, l) => s + (parseFloat(l.acres)||0), 0);
@@ -4100,6 +4857,97 @@ function buildLogCSV(log) {
   return rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
 }
 
+// Build a self-contained, print-ready HTML record.
+// Opens clean on any device and prints straight to PDF (File > Print > Save as PDF).
+function buildLogPrintableHTML(log) {
+  const esc = s => String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  // Signature: prefer the one captured on the record, fall back to the applicator's saved profile signature
+  const sigData = log.applicator_signature || (typeof userProfile !== 'undefined' && userProfile ? userProfile.signature_data : '') || '';
+  const products = Array.isArray(log.products) ? log.products : [];
+  const productRows = products.length
+    ? products.map(p =>
+        '<tr><td>' + esc(p.name) + '</td><td>' + esc(p.epa_number || 'N/A') +
+        '</td><td>' + esc(p.rate || '') + ' ' + esc(p.unit || '') + '</td></tr>'
+      ).join('')
+    : '<tr><td colspan="3" style="text-align:center;color:#888;">No products recorded</td></tr>';
+
+  const row = (label, val) =>
+    '<div class="cell"><div class="lbl">' + esc(label) + '</div><div class="val">' + (esc(val) || '&nbsp;') + '</div></div>';
+
+  const brandOrange = '#F26522';
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '<title>Application Record — ' + esc(log.field_name || 'Record') + ' — ' + esc(log.application_date || '') + '</title>' +
+    '<style>' +
+    '*{box-sizing:border-box;margin:0;padding:0;}' +
+    'body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;background:#f5f5f5;padding:20px;}' +
+    '.sheet{max-width:760px;margin:0 auto;background:#fff;padding:32px 36px;box-shadow:0 2px 12px rgba(0,0,0,.12);}' +
+    '.head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid ' + brandOrange + ';padding-bottom:14px;margin-bottom:18px;}' +
+    '.head h1{font-size:20px;letter-spacing:.5px;color:#3D3D3D;}' +
+    '.head .sub{font-size:11px;color:#777;letter-spacing:2px;text-transform:uppercase;margin-top:3px;}' +
+    '.head .brand{font-size:22px;font-weight:800;color:' + brandOrange + ';text-align:right;}' +
+    '.head .brand span{color:#3D3D3D;}' +
+    '.meta{font-size:10px;color:#999;text-align:right;margin-top:4px;}' +
+    '.sec{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:' + brandOrange + ';border-bottom:1px solid #e0e0e0;padding-bottom:4px;margin:18px 0 10px;}' +
+    '.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;}' +
+    '.grid.three{grid-template-columns:1fr 1fr 1fr;}' +
+    '.cell .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#999;}' +
+    '.cell .val{font-size:13px;color:#1a1a1a;padding:2px 0 5px;border-bottom:1px solid #f0f0f0;min-height:20px;}' +
+    'table{width:100%;border-collapse:collapse;margin-top:6px;}' +
+    'th{background:#3D3D3D;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.5px;text-align:left;padding:6px 8px;}' +
+    'td{font-size:12px;padding:6px 8px;border-bottom:1px solid #eee;}' +
+    '.foot{margin-top:24px;padding-top:12px;border-top:1px solid #e0e0e0;font-size:10px;color:#999;display:flex;justify-content:space-between;}' +
+    '.sig{margin-top:20px;}' +
+    '.sig img{max-height:70px;border-bottom:1px solid #999;}' +
+    '.sig .cap{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}' +
+    '.print-btn{display:block;max-width:760px;margin:0 auto 16px;padding:12px;background:' + brandOrange + ';color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;}' +
+    '@media print{body{background:#fff;padding:0;}.sheet{box-shadow:none;max-width:100%;padding:0.4in 0.5in;}.print-btn{display:none;}@page{size:letter portrait;margin:0.4in 0.5in;}}' +
+    '</style></head><body>' +
+    '<button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>' +
+    '<div class="sheet">' +
+    '<div class="head"><div><h1>Pesticide Application Record</h1><div class="sub">Track. Record. Comply.</div></div>' +
+    '<div><div class="brand">SprayLog<span> Pro</span></div><div class="meta">' + (log.status === 'complete' ? 'COMPLETE' : esc((log.status||'').toUpperCase())) + '</div></div></div>' +
+
+    '<div class="sec">Application Details</div>' +
+    '<div class="grid">' +
+    row('Field Name', log.field_name) +
+    row('Commodity / Crop', log.commodity_applied_to) +
+    row('Application Date', log.application_date) +
+    row('Acres Treated', log.acres) +
+    row('Start Time', log.application_time) +
+    row('Stop Time', log.stop_time) +
+    row('Pest Controlled', log.pest_controlled) +
+    row('Legal Description', log.legal_description) +
+    '</div>' +
+
+    '<div class="sec">Products Applied</div>' +
+    '<table><thead><tr><th>Product</th><th>EPA Reg. #</th><th>Rate</th></tr></thead><tbody>' + productRows + '</tbody></table>' +
+
+    '<div class="sec">Applicator</div>' +
+    '<div class="grid">' +
+    row('Applicator Name', log.applicator_name) +
+    row('Certification #', log.applicator_cert_number) +
+    row('Equipment Used', log.equipment_used) +
+    row('Pesticide Supplier', log.pesticide_supplier) +
+    '</div>' +
+
+    '<div class="sec">Conditions</div>' +
+    '<div class="grid three">' +
+    row('Water / Acre (gal)', log.water_per_acre) +
+    row('Wind Speed (mph)', log.wind_speed) +
+    row('Wind Direction', log.wind_direction) +
+    row('Temperature (°F)', log.temperature) +
+    row('Relative Humidity (%)', log.relative_humidity) +
+    row('Weather Source', log.weather_location_label) +
+    '</div>' +
+
+    (sigData ? '<div class="sig"><img src="' + esc(sigData) + '" alt="Signature"><div class="cap">Applicator Signature</div></div>' : '') +
+
+    '<div class="foot"><span>Generated by SprayLog Pro</span><span>' + esc(new Date().toLocaleDateString()) + '</span></div>' +
+    '</div></body></html>';
+}
+
 async function exportToGoogleDrive() {
   // If no records selected, show instructions
   toast('Select records using "Select Records" then click "Upload Selected to Drive"', 'info');
@@ -4118,12 +4966,12 @@ async function uploadSelectedToDrive() {
 
     let uploaded = 0;
     for (const log of toUpload) {
-      const csv = buildLogCSV(log);
-      const filename = buildFileName(log, 'csv');
-      await uploadFileToDrive(filename, csv);
+      const htmlDoc = buildLogPrintableHTML(log);
+      const filename = buildFileName(log, 'html');
+      await uploadFileToDrive(filename, htmlDoc, 'text/html');
       uploaded++;
     }
-    toast('✓ ' + uploaded + ' record(s) saved to Google Drive!');
+    toast('✓ ' + uploaded + ' record(s) saved to Google Drive! Open from Drive and print to PDF.');
     toggleSelectMode();
   } catch(e) {
     if (e.message === 'NOT_SIGNED_IN') {
@@ -4217,8 +5065,9 @@ function connectGoogleDrive() {
   gdriveTokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
-async function uploadFileToDrive(filename, content) {
+async function uploadFileToDrive(filename, content, mimeType) {
   if (!gdriveToken) throw new Error('NOT_SIGNED_IN');
+  mimeType = mimeType || 'text/csv';
 
   // Create SprayLog Pro folder if needed
   let folderId = localStorage.getItem('gdrive_folder_id');
@@ -4230,13 +5079,13 @@ async function uploadFileToDrive(filename, content) {
     folderId = 'root';
   }
 
-  const metadata = { name: filename, mimeType: 'text/csv', parents: [folderId] };
+  const metadata = { name: filename, mimeType: mimeType, parents: [folderId] };
   const boundary = '-------SprayLogBoundary';
   const body = '--' + boundary + '\r\n' +
     'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
     JSON.stringify(metadata) + '\r\n' +
     '--' + boundary + '\r\n' +
-    'Content-Type: text/csv\r\n\r\n' +
+    'Content-Type: ' + mimeType + '\r\n\r\n' +
     content + '\r\n' +
     '--' + boundary + '--';
 
@@ -4733,6 +5582,7 @@ async function importChemicalsFromLibrary(options) {
         if (!nm) return null;
         return {
           owner_id: currentUser.id,
+        org_id: currentOrgId || null,
           name: nm,
           epa_number: reg,
           active_ingredient: c.active_ingredient || '',
@@ -4867,15 +5717,26 @@ function showFeedbackError(msg) {
 // ══════════════════════════════════════════════════════
 const CHANGELOG = {
   version: APP_BUILD,
-  title: 'State-approved products & operating states',
-  date: 'May 12, 2026',
+  title: 'Teams & employees — invite your crew',
+  date: 'May 15, 2026',
   items: [
-    { type: 'new',      text: 'Profile now includes States where you operate (multi-select). This drives which state label rows are used for the New Record product picker.' },
-    { type: 'new',      text: 'New table state_label_products in Supabase (see migration). After you load Kansas or other state exports, chemicals in New Record can be limited to those lists (matched by EPA registration when present, otherwise product name).' },
-    { type: 'new',      text: 'Profile action Import state labels into my list copies state-listed products you do not already have into My Chemicals (batch safe).' },
-    { type: 'improved', text: 'Account type replaces the old Mode label in the UI (database column remains mode for now).' },
-    { type: 'new',      text: 'Run scripts/import-kansas-md.mjs with your service role key to bulk-load the Agrian markdown export into state_label_products for KS.' },
-    { type: 'new',      text: 'Build 2026.05.12.02. Next: offline sync queue, org admin users, Google Drive paper-style export.' }
+    { type: 'new',      text: 'Companies & employees. You can now invite your crew to share one company account — everyone sees the same fields, chemicals, and records. Set up your company or join one with a code the first time you log in.' },
+    { type: 'new',      text: 'Admins manage the team from Profile: invite by email or share a 6-character join code, promote employees to admin, and deactivate anyone who leaves (their records stay on file for compliance).' },
+    { type: 'new',      text: 'Void instead of delete. Completed records are locked so they can\'t be altered — if you need to fix one, void it (with a reason, kept for your audit trail) and re-enter a corrected record. Voided records are excluded from your season stats.' },
+    { type: 'new',      text: 'Every record now tracks which applicator actually did the spraying, so signatures and attribution are accurate across your team.' },
+    { type: 'new',      text: 'Full offline mode. The app now opens and works with no cell signal — create records all day in the field, they upload automatically the moment you get signal back. Nothing is ever lost.' },
+    { type: 'new',      text: 'Your chemicals, fields, and past records are saved on your device, so the product picker and everything else works without a connection.' },
+    { type: 'new',      text: 'A status bar shows when you are offline and how many records are waiting to upload. Tap it to sync instantly when signal returns.' },
+    { type: 'new',      text: 'Install SprayLog Pro to your home screen (Add to Home Screen) for an app-like experience that launches instantly, online or off.' },
+    { type: 'new',      text: 'Printed/exported records now always include your saved signature from Profile.' },
+    { type: 'new',      text: 'Star your go-to products. Tap the ☆ next to any chemical to make it a favorite — favorites jump to the top of the product picker every time you log a spray.' },
+    { type: 'new',      text: 'Recently Used products are tracked automatically. The more you use a product, the higher it sorts, so your everyday chemicals are always one tap away.' },
+    { type: 'new',      text: 'Favorites Only filter on the My Products list — hide the noise and see just the products you actually spray.' },
+    { type: 'improved', text: 'The product picker now groups into ⭐ Favorites, Recently Used, My Chemicals, and All Chemicals so the big library never gets in your way.' },
+    { type: 'improved', text: 'My Products list loads faster on large libraries and shows how many times you have used each product.' },
+    { type: 'fixed',    text: 'Custom chemicals you add are now correctly labeled Custom (previously showed as System).' },
+    { type: 'fixed',    text: 'Tightened account security so records can never be reassigned between accounts.' },
+    { type: 'new',      text: 'Google Drive export now creates a clean, professional record document (not a raw spreadsheet). Open it from Drive on any device and print straight to PDF.' }
   ]
 };
 
@@ -5080,7 +5941,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
     <!-- Actions -->
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">BUILD 2026.05.12.02</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">BUILD 2026.05.15.01</span>
       <div class="flex-gap">
         <button class="btn btn-ghost" onclick="closeFeedback()">Cancel</button>
         <button class="btn btn-primary" onclick="submitFeedback()" id="feedbackSubmitBtn">Send Feedback</button>
@@ -5139,5 +6000,13 @@ sb.auth.onAuthStateChange(async (event, session) => {
   </div>
 </div>
 
+<script>
+// Register service worker for offline app loading
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW registration failed:', err));
+  });
+}
+</script>
 </body>
 </html>
